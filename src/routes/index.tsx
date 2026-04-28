@@ -15,19 +15,22 @@ export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "Abhijit Verma " },
+      { title: "Abhijit Verma | Software Engineer" },
       {
         name: "description",
         content:
-          "Software Engineer with 3+ years building scalable event-driven backends, microservices, and production-grade Generative AI systems (RAG, AI agents).",
+          "Abhijit Verma - Software Engineer with 3+ years building scalable event-driven backends, microservices, and production-grade Generative AI systems (RAG, AI agents).",
       },
-      { property: "og:title", content: "Abhijit Verma : Software Engineer" },
+      { name: "keywords", content: "Abhijit Verma, Software Engineer, Backend Engineer, Generative AI, RAG, AI Agents, Kafka, Microservices" },
+      { property: "og:title", content: "Abhijit Verma | Software Engineer" },
       {
         property: "og:description",
         content:
-          "Backend & Generative AI engineer. Kafka, microservices, RAG, AI agents, and the boring-but-critical infra that ships them.",
+          "Portfolio of Abhijit Verma, Software Engineer specializing in Backend & Generative AI.",
       },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Abhijit Verma | Software Engineer" },
+      { name: "twitter:description", content: "Portfolio of Abhijit Verma, Software Engineer." },
     ],
   }),
 });

@@ -1,6 +1,10 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import appleTouchIcon from "../../media/favicon_io/apple-touch-icon.png?url";
+import favicon32 from "../../media/favicon_io/favicon-32x32.png?url";
+import favicon16 from "../../media/favicon_io/favicon-16x16.png?url";
+import faviconIco from "../../media/favicon_io/favicon.ico?url";
 
 function NotFoundComponent() {
   return (
@@ -29,21 +33,25 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Sunset AI Portfolio generates a professional, 1-page online portfolio from a resume." },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Sunset AI Portfolio generates a professional, 1-page online portfolio from a resume." },
+      { title: "Abhijit Verma | Software Engineer" },
+      { name: "description", content: "Portfolio of Abhijit Verma, a professional Software Engineer specializing in Backend & Generative AI." },
+      { name: "keywords", content: "Abhijit Verma, Software Engineer, Backend Engineer, Generative AI, RAG, AI Agents" },
+      { name: "author", content: "Abhijit Verma" },
+      { property: "og:title", content: "Abhijit Verma | Software Engineer" },
+      { property: "og:description", content: "Portfolio of Abhijit Verma, a professional Software Engineer specializing in Backend & Generative AI." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Lovable App" },
-      { name: "twitter:description", content: "Sunset AI Portfolio generates a professional, 1-page online portfolio from a resume." },
+      { name: "twitter:title", content: "Abhijit Verma | Software Engineer" },
+      { name: "twitter:description", content: "Portfolio of Abhijit Verma, a professional Software Engineer specializing in Backend & Generative AI." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3062d515-adf1-45ab-b30d-0e5911065ba6/id-preview-858ee237--1f76f826-0480-4164-9c05-b02f30070697.lovable.app-1777004293156.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3062d515-adf1-45ab-b30d-0e5911065ba6/id-preview-858ee237--1f76f826-0480-4164-9c05-b02f30070697.lovable.app-1777004293156.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "apple-touch-icon", sizes: "180x180", href: appleTouchIcon },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: favicon32 },
+      { rel: "icon", type: "image/png", sizes: "16x16", href: favicon16 },
+      { rel: "shortcut icon", href: faviconIco },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
