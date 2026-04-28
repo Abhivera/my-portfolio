@@ -7,7 +7,7 @@ const projects = [
     description:
       "Production-grade retrieval-augmented generation pipeline with vector search, re-ranking, and contextual chat.",
     tags: ["Python", "LangChain", "pgvector", "FastAPI"],
-    accent: "var(--sunset-orange)",
+    accent: "var(--accent)",
     status: "Coming soon",
   },
   {
@@ -15,7 +15,7 @@ const projects = [
     description:
       "Idempotent payment microservice with Kafka pub/sub, webhook handling, and exactly-once processing semantics.",
     tags: ["Node.js", "Kafka", "PostgreSQL", "Docker"],
-    accent: "var(--sunset-orange)",
+    accent: "var(--accent)",
     status: "Case study",
   },
   {
@@ -23,7 +23,7 @@ const projects = [
     description:
       "Multi-step reasoning agent built on Model Context Protocol for autonomous task automation.",
     tags: ["MCP", "LLM", "Python", "Tools"],
-    accent: "var(--cinnamon)",
+    accent: "var(--secondary)",
     status: "In progress",
   },
 ];
@@ -34,7 +34,7 @@ export function Projects() {
       <div className="max-w-6xl mx-auto px-6 lg:px-8">
         <div className="flex items-end justify-between flex-wrap gap-4 mb-16">
           <div>
-            <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--cinnamon)]">
+            <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--accent)]">
               ※ Selected Work
             </span>
             <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
@@ -55,7 +55,7 @@ export function Projects() {
           {projects.map((p) => (
             <article
               key={p.title}
-              className="group relative rounded-3xl p-7 bg-background border border-border overflow-hidden hover:shadow-glow hover:-translate-y-1 transition-all"
+              className="group relative rounded-3xl p-7 bg-card border border-border overflow-hidden shadow-soft hover:shadow-glow hover:-translate-y-1 transition-all"
             >
               <div
                 className="absolute -top-20 -right-20 h-40 w-40 rounded-full opacity-30 blur-3xl group-hover:opacity-60 transition-opacity"
@@ -66,8 +66,8 @@ export function Projects() {
                   <span
                     className="text-[10px] font-mono uppercase tracking-widest px-2 py-1 rounded-md"
                     style={{
-                      background: "color-mix(in oklab, var(--chocolate) 8%, transparent)",
-                      color: "var(--cocoa)",
+                      background: "color-mix(in oklab, var(--primary) 8%, transparent)",
+                      color: "var(--muted-foreground)",
                     }}
                   >
                     {p.status}

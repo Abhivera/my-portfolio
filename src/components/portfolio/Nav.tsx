@@ -33,7 +33,7 @@ export function Nav() {
             <Terminal size={22} />
           </span>
           <span className="font-display text-xl sm:text-2xl tracking-tight font-semibold">
-            Abhijit<span className="text-[color:var(--sunset-orange)]">.</span>
+            Abhijit<span className="text-[color:var(--accent)]">.</span>
           </span>
         </a>
         <ul className="hidden md:flex items-center gap-2 text-base">

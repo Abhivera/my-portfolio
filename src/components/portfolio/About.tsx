@@ -4,7 +4,7 @@ export function About() {
       <div className="grid lg:grid-cols-12 gap-12 lg:gap-16">
         <div className="lg:col-span-4">
           <div className="sticky top-28">
-            <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--cinnamon)]">
+            <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--accent)]">
               ※ About
             </span>
             <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
@@ -33,22 +33,22 @@ export function About() {
               {
                 t: "Backend Architecture",
                 d: "Event-driven systems with Kafka, SQS & microservices.",
-                color: "var(--cinnamon)",
+                color: "var(--secondary)",
               },
               {
                 t: "Generative AI",
                 d: "RAG, LangChain, vector search & autonomous agents.",
-                color: "var(--sunset-orange)",
+                color: "var(--accent)",
               },
               {
                 t: "Cloud & DevOps",
                 d: "AWS, Docker, Kubernetes, CI/CD pipelines.",
-                color: "var(--coffee)",
+                color: "var(--primary)",
               },
               {
                 t: "Performance",
                 d: "Query optimization, async processing, low-latency APIs.",
-                color: "var(--sunset-orange)",
+                color: "var(--accent)",
               },
             ].map((c) => (
               <div

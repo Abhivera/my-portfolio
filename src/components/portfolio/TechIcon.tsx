@@ -78,8 +78,8 @@ export function TechIcon({ name, size = 16, className, brandColor = false }: Tec
           width: size,
           height: size,
           fontSize: Math.max(8, size * 0.55),
-          background: "color-mix(in oklab, var(--chocolate) 12%, transparent)",
-          color: "var(--chocolate)",
+          background: "color-mix(in oklab, var(--primary) 12%, transparent)",
+          color: "var(--primary)",
         }}
         aria-hidden
       >

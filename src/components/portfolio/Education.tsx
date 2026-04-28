@@ -10,7 +10,7 @@ export function Education() {
     <section className="py-24 sm:py-32 max-w-6xl mx-auto px-6 lg:px-8">
       <div className="grid lg:grid-cols-2 gap-8">
         <div className="rounded-3xl p-10 bg-gradient-warm border border-border shadow-soft">
-          <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--cinnamon)]">
+          <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--accent)]">
             ※ Education
           </span>
           <h3 className="mt-4 font-display text-3xl tracking-tight">
@@ -24,7 +24,7 @@ export function Education() {
         </div>
 
         <div className="rounded-3xl p-10 bg-card border border-border shadow-soft">
-          <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--cinnamon)]">
+          <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--accent)]">
             ※ Certifications
           </span>
           <h3 className="mt-4 font-display text-3xl tracking-tight">

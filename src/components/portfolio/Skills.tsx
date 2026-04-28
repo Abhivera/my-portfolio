@@ -3,32 +3,32 @@ import { TechIcon } from "./TechIcon";
 const groups = [
   {
     title: "Backend",
-    color: "var(--cinnamon)",
+    color: "var(--secondary)",
     items: ["Python", "Node.js", "FastAPI", "Express", "Microservices"],
   },
   {
     title: "Event Systems",
-    color: "var(--sunset-orange)",
+    color: "var(--accent)",
     items: ["Apache Kafka", "AWS SQS", "Pub/Sub", "Event-Driven"],
   },
   {
     title: "Databases",
-    color: "var(--coffee)",
+    color: "var(--primary)",
     items: ["PostgreSQL", "Redis", "DynamoDB", "MongoDB"],
   },
   {
     title: "Generative AI",
-    color: "var(--sunset-orange)",
+    color: "var(--accent)",
     items: ["RAG", "LangChain", "Vector Search", "AI Agents (MCP)", "Claude", "HuggingFace"],
   },
   {
     title: "APIs & Frontend",
-    color: "var(--fresh-hay)",
+    color: "var(--secondary)",
     items: ["REST", "GraphQL", "gRPC", "Webhooks", "React"],
   },
   {
     title: "Cloud & DevOps",
-    color: "var(--gander-red)",
+    color: "var(--muted-foreground)",
     items: ["AWS", "Docker", "Kubernetes", "CI/CD", "Prometheus"],
   },
 ];
@@ -37,7 +37,7 @@ export function Skills() {
   return (
     <section id="skills" className="py-24 sm:py-32 max-w-6xl mx-auto px-6 lg:px-8">
       <div className="mb-16 max-w-2xl">
-        <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--cinnamon)]">
+        <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--accent)]">
           ※ Toolkit
         </span>
         <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">

@@ -29,7 +29,7 @@ export function Marquee() {
           <div key={i} className="flex items-center gap-6 font-display text-2xl text-foreground/70">
             <TechIcon name={item} size={28} className="text-foreground/60" />
             <span>{item}</span>
-            <span className="text-[color:var(--sunset-orange)] ml-6">✦</span>
+            <span className="text-[color:var(--accent)] ml-6">✦</span>
           </div>
         ))}
       </div>

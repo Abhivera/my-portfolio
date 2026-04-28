@@ -29,8 +29,8 @@ export function Hero() {
       <div className="relative max-w-6xl mx-auto px-6 lg:px-8 w-full">
         <div className="flex items-center gap-3 mb-8">
           <span className="relative flex h-2.5 w-2.5">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-[color:var(--sunset-orange)] opacity-60 animate-ping" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[color:var(--sunset-orange)]" />
+            <span className="absolute inline-flex h-full w-full rounded-full bg-[color:var(--accent)] opacity-60 animate-ping" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[color:var(--accent)]" />
           </span>
           <span className="text-sm font-mono text-muted-foreground tracking-wide uppercase">
             Available for opportunities
@@ -44,7 +44,7 @@ export function Hero() {
           <br />
           <span
             className="inline-block px-3 py-1 rounded-2xl"
-            style={{ background: "var(--sunset-orange)", color: "var(--goose-down)" }}
+            style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
           >
             GenAI
           </span>{" "}

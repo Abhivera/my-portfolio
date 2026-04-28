@@ -36,7 +36,7 @@ export function Experience() {
       <div className="max-w-6xl mx-auto px-6 lg:px-8">
         <div className="flex items-end justify-between flex-wrap gap-4 mb-16">
           <div>
-            <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--cinnamon)]">
+            <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--accent)]">
               ※ Experience
             </span>
             <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
@@ -52,7 +52,7 @@ export function Experience() {
           {jobs.map((job, i) => (
             <article
               key={job.company}
-              className="group relative rounded-3xl p-8 sm:p-10 bg-background border border-border shadow-soft hover:shadow-warm transition-all"
+              className="group relative rounded-3xl p-8 sm:p-10 bg-card border border-border shadow-soft hover:shadow-warm transition-all"
             >
               <div className="grid lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-4">
@@ -70,7 +70,7 @@ export function Experience() {
                       <li key={p} className="flex gap-3 text-foreground/85 leading-relaxed">
                         <span
                           className="mt-2.5 h-1.5 w-1.5 rounded-full shrink-0"
-                          style={{ background: "var(--sunset-orange)" }}
+                          style={{ background: "var(--accent)" }}
                         />
                         <span>{p}</span>
                       </li>
