@@ -32,11 +32,11 @@ const jobs = [
 
 export function Experience() {
   return (
-    <section id="experience" className="py-24 sm:py-32 bg-card/50">
-      <div className="max-w-6xl mx-auto px-6 lg:px-8">
-        <div className="flex items-end justify-between flex-wrap gap-4 mb-16">
+    <section id="experience" className="py-12 sm:py-20 bg-card/50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-end justify-between flex-wrap gap-4 mb-12 sm:mb-16">
           <div>
-            <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--accent)]">
+            <span className="inline-flex w-fit items-center rounded-full border border-[color:var(--aqua-400)]/30 bg-[color:var(--aqua-50)]/70 px-3 py-1 text-xs font-semibold tracking-wide text-[color:var(--aqua-700)]">
               ※ Experience
             </span>
             <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
@@ -49,14 +49,19 @@ export function Experience() {
         </div>
 
         <div className="space-y-8">
-          {jobs.map((job, i) => (
+          {jobs.map((job) => (
             <article
               key={job.company}
-              className="group relative rounded-3xl p-8 sm:p-10 bg-card border border-border shadow-soft hover:shadow-warm transition-all"
+              className="group relative rounded-3xl p-5 sm:p-10 bg-card border border-border shadow-soft hover:shadow-warm hover:-translate-y-1 transition-all overflow-hidden"
             >
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-sunset opacity-80" />
               <div className="grid lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-4">
- 
+                  {job.current ? (
+                    <span className="inline-flex items-center rounded-full bg-secondary px-3 py-1 text-xs font-mono text-secondary-foreground border border-border">
+                      Current role
+                    </span>
+                  ) : null}
                   <h3 className="mt-3 font-display text-2xl sm:text-3xl tracking-tight">
                     {job.company}
                   </h3>

@@ -21,15 +21,15 @@ export function Marquee() {
   const doubled = [...items, ...items];
   return (
     <div
-      className="border-y border-border py-6 overflow-hidden"
+      className="relative z-10 border-y border-border py-5 sm:py-6 overflow-hidden shadow-soft"
       style={{ background: "var(--gradient-warm)" }}
     >
-      <div className="flex gap-12 marquee whitespace-nowrap">
+      <div className="flex gap-8 sm:gap-12 marquee whitespace-nowrap">
         {doubled.map((item, i) => (
-          <div key={i} className="flex items-center gap-6 font-display text-2xl text-foreground/70">
-            <TechIcon name={item} size={28} className="text-foreground/60" />
+          <div key={i} className="flex items-center gap-4 sm:gap-6 font-display text-lg sm:text-2xl text-foreground/70">
+            <TechIcon name={item} size={22} />
             <span>{item}</span>
-            <span className="text-[color:var(--accent)] ml-6">✦</span>
+            <span className="text-[color:var(--accent)] ml-4 sm:ml-6">✦</span>
           </div>
         ))}
       </div>

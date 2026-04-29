@@ -30,11 +30,11 @@ const projects = [
 
 export function Projects() {
   return (
-    <section id="projects" className="py-24 sm:py-32 bg-card/50">
-      <div className="max-w-6xl mx-auto px-6 lg:px-8">
-        <div className="flex items-end justify-between flex-wrap gap-4 mb-16">
+    <section id="projects" className="py-12 sm:py-20 bg-card/50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-end justify-between flex-wrap gap-4 mb-12 sm:mb-16">
           <div>
-            <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--accent)]">
+            <span className="inline-flex w-fit items-center rounded-full border border-[color:var(--aqua-400)]/30 bg-[color:var(--aqua-50)]/70 px-3 py-1 text-xs font-semibold tracking-wide text-[color:var(--aqua-700)]">
               ※ Selected Work
             </span>
             <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
@@ -51,11 +51,11 @@ export function Projects() {
           </a>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {projects.map((p) => (
             <article
               key={p.title}
-              className="group relative rounded-3xl p-7 bg-card border border-border overflow-hidden shadow-soft hover:shadow-glow hover:-translate-y-1 transition-all"
+              className="group relative rounded-3xl p-5 sm:p-7 bg-card border border-border overflow-hidden shadow-soft hover:shadow-glow hover:-translate-y-1 transition-all"
             >
               <div
                 className="absolute -top-20 -right-20 h-40 w-40 rounded-full opacity-30 blur-3xl group-hover:opacity-60 transition-opacity"
@@ -64,10 +64,10 @@ export function Projects() {
               <div className="relative">
                 <div className="flex items-center justify-between">
                   <span
-                    className="text-[10px] font-mono uppercase tracking-widest px-2 py-1 rounded-md"
+                    className="text-[10px] font-mono uppercase tracking-widest px-2.5 py-1 rounded-full border border-border"
                     style={{
-                      background: "color-mix(in oklab, var(--primary) 8%, transparent)",
-                      color: "var(--muted-foreground)",
+                      background: "color-mix(in oklab, var(--accent) 18%, transparent)",
+                      color: "var(--primary)",
                     }}
                   >
                     {p.status}
@@ -84,7 +84,7 @@ export function Projects() {
                   {p.tags.map((t) => (
                     <span
                       key={t}
-                      className="inline-flex items-center gap-1 text-xs font-mono pl-1.5 pr-2 py-0.5 rounded text-foreground/70 border border-border"
+                      className="inline-flex items-center gap-1.5 text-xs font-mono pl-1.5 pr-2 py-1 rounded-full bg-secondary/60 text-foreground/75 border border-border"
                     >
                       <TechIcon name={t} size={11} brandColor />
                       {t}

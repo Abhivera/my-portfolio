@@ -1,10 +1,10 @@
 export function About() {
   return (
-    <section id="about" className="py-24 sm:py-32 max-w-6xl mx-auto px-6 lg:px-8">
+    <section id="about" className="py-12 sm:py-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="grid lg:grid-cols-12 gap-12 lg:gap-16">
         <div className="lg:col-span-4">
           <div className="sticky top-28">
-            <span className="font-mono text-xs uppercase tracking-widest text-[color:var(--accent)]">
+            <span className="inline-flex w-fit items-center rounded-full border border-[color:var(--aqua-400)]/30 bg-[color:var(--aqua-50)]/70 px-3 py-1 text-xs font-semibold tracking-wide text-[color:var(--aqua-700)]">
               ※ About
             </span>
             <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
@@ -15,7 +15,7 @@ export function About() {
           </div>
         </div>
 
-        <div className="lg:col-span-8 space-y-6 text-lg leading-relaxed text-foreground/85">
+        <div className="lg:col-span-8 space-y-6 text-base sm:text-lg leading-relaxed text-foreground/85">
           <p>
             I design and build the backbone of modern applications — from event-driven microservices
             handling hundreds of thousands of requests, to AI agents that reason, retrieve, and act
@@ -53,10 +53,10 @@ export function About() {
             ].map((c) => (
               <div
                 key={c.t}
-                className="rounded-2xl p-5 bg-card shadow-soft hover:shadow-warm hover:-translate-y-1 transition-all border border-border/60"
+                className="group rounded-2xl p-5 bg-card/90 shadow-soft hover:shadow-warm hover:-translate-y-1 transition-all border border-border/60"
               >
                 <div
-                  className="h-2 w-12 rounded-full mb-4"
+                  className="h-2 w-12 rounded-full mb-4 transition-all group-hover:w-16"
                   style={{ background: c.color }}
                 />
                 <div className="font-display text-xl">{c.t}</div>

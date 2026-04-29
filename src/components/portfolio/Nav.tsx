@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Terminal } from "lucide-react";
+import { Terminal, Mail } from "lucide-react";
 
 const links = [
   { href: "#about", label: "About" },
@@ -27,12 +27,12 @@ export function Nav() {
           : "bg-transparent"
       }`}
     >
-      <nav className="max-w-6xl mx-auto px-6 lg:px-8 h-20 flex items-center justify-between">
+      <nav className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
         <a href="#top" className="flex items-center gap-2.5 group">
-          <span className="h-10 w-10 rounded-xl bg-gradient-sunset shadow-warm flex items-center justify-center text-primary-foreground group-hover:rotate-3 transition-transform duration-300">
-            <Terminal size={22} />
+          <span className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-gradient-sunset shadow-warm flex items-center justify-center text-primary-foreground group-hover:rotate-3 transition-transform duration-300">
+            <Terminal size={20} />
           </span>
-          <span className="font-display text-xl sm:text-2xl tracking-tight font-semibold">
+          <span className="font-display text-lg sm:text-2xl tracking-tight font-semibold">
             Abhijit<span className="text-[color:var(--accent)]">.</span>
           </span>
         </a>
@@ -54,6 +54,13 @@ export function Nav() {
         >
           Let's talk
           <span aria-hidden>→</span>
+        </a>
+        <a
+          href="mailto:abhijitakadeveloper@gmail.com"
+          className="sm:hidden inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-soft"
+          aria-label="Email"
+        >
+          <Mail size={18} />
         </a>
       </nav>
     </header>

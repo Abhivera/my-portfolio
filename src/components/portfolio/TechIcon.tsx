@@ -58,16 +58,69 @@ const map: Record<string, SimpleIcon | undefined> = {
   Email: siGmail,
 };
 
+const fallbackBrandColors: Record<string, string | undefined> = {
+  AWS: "#FF9900",
+  "AWS SQS": "#FF9900",
+  DynamoDB: "#4053D6",
+  "Vector DB": "#71C9CE",
+  RAG: "#71C9CE",
+  MCP: "#71C9CE",
+  LLM: "#71C9CE",
+  Tools: "#71C9CE",
+  Webhooks: "#71C9CE",
+  REST: "#71C9CE",
+  gRPC: "#4285F4",
+  PubSub: "#4285F4",
+  "Pub/Sub": "#4285F4",
+  Microservices: "#71C9CE",
+  "Event-Driven": "#71C9CE",
+};
+
 interface TechIconProps {
   name: string;
   size?: number;
   className?: string;
-  /** Use the brand color instead of currentColor */
+  /** Use the original brand color instead of currentColor */
   brandColor?: boolean;
 }
 
-export function TechIcon({ name, size = 16, className, brandColor = false }: TechIconProps) {
+export function TechIcon({ name, size = 16, className, brandColor = true }: TechIconProps) {
   const icon = map[name];
+  const fallbackColor = fallbackBrandColors[name] ?? "var(--primary)";
+  const isAwsFamily = name === "AWS" || name === "AWS SQS";
+
+  if (isAwsFamily) {
+    return (
+      <svg
+        role="img"
+        viewBox="0 0 32 32"
+        width={size}
+        height={size}
+        className={className}
+        aria-label="Amazon Web Services"
+      >
+        <title>Amazon Web Services</title>
+        <text
+          x="3.5"
+          y="14.5"
+          fontSize="9.5"
+          fontWeight="700"
+          fontFamily="Inter, system-ui, sans-serif"
+          fill="#111111"
+        >
+          aws
+        </text>
+        <path
+          d="M6 20.5c4 3 11.5 3.2 17.5 0.6"
+          fill="none"
+          stroke="#FF9900"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+        <path d="M22.8 19.5l2.8.9-1.8 2.3z" fill="#FF9900" />
+      </svg>
+    );
+  }
 
   if (!icon) {
     // Fallback: rounded badge with the first letter
@@ -78,8 +131,8 @@ export function TechIcon({ name, size = 16, className, brandColor = false }: Tec
           width: size,
           height: size,
           fontSize: Math.max(8, size * 0.55),
-          background: "color-mix(in oklab, var(--primary) 12%, transparent)",
-          color: "var(--primary)",
+          background: `color-mix(in oklab, ${fallbackColor} 16%, transparent)`,
+          color: fallbackColor,
         }}
         aria-hidden
       >
