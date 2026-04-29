@@ -18,11 +18,11 @@ export function Hero() {
     >
       {/* Decorative blobs */}
       <div
-        className="absolute -top-44 -right-52 sm:-top-40 sm:-right-40 h-[500px] w-[500px] rounded-full opacity-35 sm:opacity-40 blur-3xl"
+        className="absolute -top-44 -right-52 sm:-top-40 sm:-right-40 h-[500px] w-[500px] rounded-full opacity-35 sm:opacity-40 blur-3xl motion-safe:animate-[float_6s_ease-in-out_infinite]"
         style={{ background: "var(--gradient-sunset)" }}
       />
       <div
-        className="absolute -bottom-64 -left-52 sm:-bottom-56 sm:-left-40 h-[500px] w-[500px] rounded-full opacity-25 sm:opacity-30 blur-3xl"
+        className="absolute -bottom-40 -left-40 sm:-bottom-36 sm:-left-32 h-[500px] w-[500px] rounded-full opacity-25 sm:opacity-30 blur-3xl motion-safe:animate-[float_7s_ease-in-out_infinite_reverse]"
         style={{ background: "var(--gradient-ai)" }}
       />
 
