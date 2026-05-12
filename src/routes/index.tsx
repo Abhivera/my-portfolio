@@ -43,8 +43,8 @@ function Index() {
       <Marquee />
       <About />
       <Experience />
-      <Skills />
       <Projects />
+      <Skills />
       <Education />
       <Contact />
     </main>

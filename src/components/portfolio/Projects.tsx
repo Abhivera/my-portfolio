@@ -1,30 +1,56 @@
 import { TechIcon } from "./TechIcon";
 
-// Placeholder projects — easy to swap with real GitHub repos later.
-const projects = [
+type ProjectLink = { label: string; href: string };
+
+type Project = {
+  title: string;
+  tagline?: string;
+  description: string;
+  tags: string[];
+  accent: string;
+  status: string;
+  links?: ProjectLink[];
+  /** Where the whole card navigates (defaults to the first `links` entry). */
+  cardHref?: string;
+  /** Public URL (e.g. `/file.png` from `public/`) */
+  iconSrc?: string;
+  iconAlt?: string;
+};
+
+function projectCardHref(p: Project): string | undefined {
+  return p.cardHref ?? p.links?.[0]?.href;
+}
+
+const projects: Project[] = [
   {
-    title: "RAG Knowledge Engine",
+    title: "Streammeo",
+    tagline: "Embeddable voice customer-support agent",
     description:
-      "Production-grade retrieval-augmented generation pipeline with vector search, re-ranking, and contextual chat.",
-    tags: ["Python", "LangChain", "pgvector", "FastAPI"],
+      "Built an embeddable voice customer-support agent merchants add with a script tag. End users speak in regional languages; the stack runs STT → LLM (with tool calls) → TTS and streams audio back. Shipped a React dashboard for sessions, settings, and FAQs, plus a vanilla JS widget (Shadow DOM) for host-site isolation.",
+    tags: ["React", "Node.js", "TypeScript", "Anthropic", "LLM"],
     accent: "var(--accent)",
-    status: "Coming soon",
+    status: "Product",
+    links: [
+      { label: "Streammeo", href: "https://streammeo.com" },
+      { label: "POC on GitHub", href: "https://github.com/Abhivera/streammeo" },
+    ],
+    iconSrc: "/stremmeo-logo.png",
+    iconAlt: "Streammeo — microphone and sound waves mark",
   },
   {
-    title: "Event-Driven Payment Service",
+    title: "GitClaw",
+    tagline: "Local GitHub, GitLab & Bitbucket backup scheduler",
     description:
-      "Idempotent payment microservice with Kafka pub/sub, webhook handling, and exactly-once processing semantics.",
-    tags: ["Node.js", "Kafka", "PostgreSQL", "Docker"],
+      "Back up GitHub, GitLab (including self-managed URLs), and Bitbucket from online hosting into local storage you choose—clone, fetch, and pull to SSD, HDD, or network paths; repos stay as normal git folders on disk. Filters, parallel jobs with tunable concurrency for memory and CPU headroom, and per-repo progress in the UI. Schedule daily, weekly, or monthly runs alongside system tray integration. Incremental updates keep clones fresh. Open-source desktop app (MIT) for Windows, Linux, and macOS.",
+    tags: ["GitHub", "GitLab", "Bitbucket", "Electron"],
     accent: "var(--accent)",
-    status: "Case study",
-  },
-  {
-    title: "AI Agent (MCP)",
-    description:
-      "Multi-step reasoning agent built on Model Context Protocol for autonomous task automation.",
-    tags: ["MCP", "LLM", "Python", "Tools"],
-    accent: "var(--secondary)",
-    status: "In progress",
+    status: "Open source",
+    links: [
+      { label: "GitClaw", href: "https://gitclaw.online" },
+      { label: "Open source on GitHub", href: "https://github.com/Abhivera/gitclaw" },
+    ],
+    iconSrc: "/gitclaw-icon.png",
+    iconAlt: "GitClaw — lobster claw and git mark",
   },
 ];
 
@@ -51,49 +77,118 @@ export function Projects() {
           </a>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {projects.map((p) => (
+        <div className="grid grid-cols-1 gap-4 sm:gap-6">
+          {projects.map((p) => {
+            const href = projectCardHref(p);
+            const cardIsLink = Boolean(href);
+
+            return (
             <article
               key={p.title}
-              className="group relative rounded-3xl p-5 sm:p-7 bg-card border border-border overflow-hidden shadow-soft hover:shadow-glow hover:-translate-y-1 transition-all"
+              className={`group relative rounded-3xl p-5 sm:p-7 bg-card border border-border overflow-hidden shadow-soft transition-all ${
+                cardIsLink
+                  ? "cursor-pointer hover:shadow-glow hover:-translate-y-1"
+                  : "hover:shadow-glow hover:-translate-y-1"
+              }`}
             >
+              {cardIsLink ? (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="absolute inset-0 z-10 rounded-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--aqua-400)] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  <span className="sr-only">
+                    Open {p.title}
+                    {p.tagline ? ` — ${p.tagline}` : ""} (opens in new tab)
+                  </span>
+                </a>
+              ) : null}
               <div
-                className="absolute -top-20 -right-20 h-40 w-40 rounded-full opacity-30 blur-3xl group-hover:opacity-60 transition-opacity"
+                className="absolute -top-20 -right-20 h-40 w-40 rounded-full opacity-30 blur-3xl group-hover:opacity-60 transition-opacity pointer-events-none"
                 style={{ background: p.accent }}
               />
-              <div className="relative">
-                <div className="flex items-center justify-between">
-                  <span
-                    className="text-[10px] font-mono uppercase tracking-widest px-2.5 py-1 rounded-full border border-border"
-                    style={{
-                      background: "color-mix(in oklab, var(--accent) 18%, transparent)",
-                      color: "var(--primary)",
-                    }}
-                  >
-                    {p.status}
-                  </span>
-                  <span className="text-foreground/40 group-hover:text-foreground transition-colors text-xl">
-                    →
-                  </span>
-                </div>
-                <h3 className="mt-6 font-display text-2xl tracking-tight">{p.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  {p.description}
-                </p>
-                <div className="mt-6 flex flex-wrap gap-1.5">
-                  {p.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="inline-flex items-center gap-1.5 text-xs font-mono pl-1.5 pr-2 py-1 rounded-full bg-secondary/60 text-foreground/75 border border-border"
+              <div
+                className={`relative z-20 flex flex-row gap-5 sm:gap-8 items-center ${
+                  cardIsLink ? "pointer-events-none" : ""
+                }`}
+              >
+                <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-2xl border border-border bg-white p-2.5 shadow-sm sm:h-32 sm:w-32 sm:p-3">
+                  {p.iconSrc ? (
+                    <img
+                      src={p.iconSrc}
+                      alt={p.iconAlt ?? ""}
+                      width={128}
+                      height={128}
+                      className="max-h-full max-w-full object-contain object-center"
+                    />
+                  ) : (
+                    <div
+                      className="flex size-full min-h-0 items-center justify-center rounded-xl bg-secondary/55 font-display text-2xl tracking-tight text-muted-foreground sm:text-3xl"
+                      aria-hidden
                     >
-                      <TechIcon name={t} size={11} brandColor />
-                      {t}
+                      {p.title.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className="text-[10px] font-mono uppercase tracking-widest px-2.5 py-1 rounded-full border border-border"
+                      style={{
+                        background: "color-mix(in oklab, var(--accent) 18%, transparent)",
+                        color: "var(--primary)",
+                      }}
+                    >
+                      {p.status}
                     </span>
-                  ))}
+                    <span className="text-foreground/40 group-hover:text-foreground transition-colors text-xl shrink-0">
+                      →
+                    </span>
+                  </div>
+                  <h3 className="mt-3 font-display text-2xl tracking-tight">{p.title}</h3>
+                  {p.tagline ? (
+                    <p className="mt-1 text-sm text-muted-foreground/90 leading-snug">{p.tagline}</p>
+                  ) : null}
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                    {p.description}
+                  </p>
+                  {p.links?.length ? (
+                    <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1.5">
+                      {p.links.map((link) => (
+                        <a
+                          key={link.href}
+                          href={link.href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`text-xs font-medium text-[color:var(--aqua-700)] hover:text-foreground underline-offset-2 hover:underline ${
+                            cardIsLink ? "pointer-events-auto relative z-20" : ""
+                          }`}
+                        >
+                          {link.label}
+                          <span aria-hidden className="ml-0.5 opacity-60">
+                            ↗
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="mt-6 flex flex-wrap gap-1.5">
+                    {p.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="inline-flex items-center gap-1.5 text-xs font-mono pl-1.5 pr-2 py-1 rounded-full bg-secondary/60 text-foreground/75 border border-border"
+                      >
+                        <TechIcon name={t} size={11} brandColor />
+                        {t}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
 
         <div className="mt-12 rounded-3xl p-8 sm:p-10 border-2 border-dashed border-border text-center">
