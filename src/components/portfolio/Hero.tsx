@@ -1,14 +1,4 @@
-import { FileText, Eye, Download } from "lucide-react";
-import resumeUrl from "../../../media/Abhijit_Verma_Resume.docx?url";
-import resumePdfUrl from "../../../media/Abhijit_Verma_Resume.pdf?url";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+
 
 export function Hero() {
   return (
@@ -29,13 +19,22 @@ export function Hero() {
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="grid xl:grid-cols-12 gap-10 items-start">
           <div className="xl:col-span-7">
-            <div className="flex items-center gap-3 mb-8">
+            <div className="flex flex-wrap items-center gap-3 mb-8">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
               </span>
               <span className="text-sm font-mono text-foreground/80 tracking-wide uppercase">
                 Available for opportunities
+              </span>
+              <span
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold tracking-wide border border-border/60"
+                style={{
+                  background: "color-mix(in oklab, var(--accent) 18%, var(--surface))",
+                  color: "var(--primary)",
+                }}
+              >
+                Full Stack AI Engineer
               </span>
             </div>
 
@@ -70,62 +69,7 @@ export function Hero() {
             View My Projects
             <span aria-hidden>↓</span>
           </a>
-          
-          <Dialog>
-            <DialogTrigger asChild>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 px-5 sm:px-6 py-3 rounded-full border-2 border-foreground/15 hover:border-foreground/40 font-medium whitespace-nowrap transition-colors cursor-pointer"
-              >
-                <FileText className="w-4 h-4" />
-                Resume
-              </button>
-            </DialogTrigger>
-            <DialogContent className="max-w-[96vw] sm:max-w-5xl h-[88dvh] flex flex-col overflow-hidden rounded-3xl border-border/50 bg-card/95 p-0 shadow-glow backdrop-blur-xl">
-              <DialogHeader className="flex flex-col gap-4 border-b border-border/60 bg-background/80 px-5 py-4 pr-12 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                <div className="flex items-start gap-3 text-left">
-                  <span className="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-secondary text-primary">
-                    <Eye className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <DialogTitle className="font-display text-2xl text-foreground">
-                      Resume preview
-                    </DialogTitle>
-                    <DialogDescription className="text-muted-foreground text-sm mt-1">
-                      Read the PDF inline or download a copy.
-                    </DialogDescription>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <a
-                    href={resumeUrl}
-                    download="Abhijit_Verma_Resume.docx"
-                    className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 sm:text-sm"
-                  >
-                    <Download className="w-3 h-3 sm:w-4 sm:h-4" />
-                    DOCX
-                  </a>
-                  <a
-                    href={resumePdfUrl}
-                    download="Abhijit_Verma_Resume.pdf"
-                    className="inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-warm transition-all hover:shadow-glow sm:text-sm"
-                  >
-                    <Download className="w-3 h-3 sm:w-4 sm:h-4" />
-                    PDF
-                  </a>
-                </div>
-              </DialogHeader>
-              <div className="relative flex-1 bg-muted/50 p-2 sm:p-4">
-                <div className="h-full overflow-hidden rounded-2xl border border-border/70 bg-white shadow-soft">
-                  <iframe
-                    src={`${resumePdfUrl}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`}
-                    title="Resume Preview"
-                    className="h-full w-full border-0"
-                  />
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+
           <a
             href="https://www.linkedin.com/in/abhijit-verma-532996165/"
             target="_blank"

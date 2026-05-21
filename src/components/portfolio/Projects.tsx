@@ -78,10 +78,10 @@ export function Projects() {
         <div className="flex items-end justify-between flex-wrap gap-4 mb-12 sm:mb-16">
           <div>
             <span className="inline-flex w-fit items-center rounded-full border border-[color:var(--aqua-400)]/30 bg-[color:var(--aqua-50)]/70 px-3 py-1 text-xs font-semibold tracking-wide text-[color:var(--aqua-700)]">
-              ※ Selected Work
+              ※ Personal Projects
             </span>
             <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
-              Things I've built.
+              Personal Projects.
             </h2>
           </div>
           <a
