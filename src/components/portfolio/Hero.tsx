@@ -71,7 +71,7 @@ export function Hero() {
           </a>
 
           <a
-            href="https://www.linkedin.com/in/abhijit-verma-532996165/"
+            href="https://www.linkedin.com/in/abhijit-verma-532996165"
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full border-2 border-foreground/15 hover:border-foreground/40 font-medium whitespace-nowrap transition-colors"
