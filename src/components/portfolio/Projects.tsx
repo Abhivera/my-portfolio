@@ -23,6 +23,23 @@ function projectCardHref(p: Project): string | undefined {
 
 const projects: Project[] = [
   {
+    title: "Dietly",
+    tagline: "AI Nutrition Platform",
+    description:
+      "Shipped multimodal meal photo → LLM → structured nutrition output (calories, macros, meal name, exercise hints) behind a provider-abstracted vision service (OpenAI-compatible / Gemini / Bedrock). Owned the FastAPI pipeline (upload, analysis persistence, public rate-limited demo API) and domain APIs that consume model output for net calories, streaks, and meal history. React/Redux client surfaces analysis results, meal logging, and Chart.js analytics over the REST API.",
+    tags: ["FastAPI", "React", "Redux", "LLM", "PostgreSQL"],
+    accent: "var(--accent)",
+    status: "Product",
+    links: [
+      { label: "Dietly", href: "https://dietly.org" },
+      { label: "Frontend", href: "https://github.com/Abhivera/dietly-frontend" },
+      { label: "Backend", href: "https://github.com/Abhivera/dietly-backend" },
+    ],
+    cardHref: "https://dietly.org",
+    iconSrc: "/dietly-icon.png",
+    iconAlt: "Dietly — bowl with fresh meal ingredients",
+  },
+  {
     title: "Streammeo",
     tagline: "Embeddable voice customer-support agent",
     description:
