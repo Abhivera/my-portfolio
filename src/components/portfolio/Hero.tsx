@@ -33,8 +33,7 @@ export function Hero() {
                   background: "color-mix(in oklab, var(--accent) 18%, var(--surface))",
                   color: "var(--primary)",
                 }}
-              >
-                Full Stack AI Engineer
+              > AI Software  Engineer
               </span>
             </div>
 

@@ -14,7 +14,13 @@ const items = [
   "RAG",
   "GraphQL",
   "gRPC",
+  "Next.js",
+  "Vercel",
   "Microservices",
+  "OpenAI",
+  "Anthropic",
+  "Claude Code",
+  "Cursor",
 ];
 
 export function Marquee() {

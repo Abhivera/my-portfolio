@@ -17,7 +17,7 @@ export function About() {
 
         <div className="lg:col-span-8 space-y-6 text-base sm:text-lg leading-relaxed text-foreground/85">
           <p>
-            I design and build the backbone of modern applications — from event-driven microservices
+            I design and build the backbone of modern applications  from event-driven microservices
             handling hundreds of thousands of requests, to AI agents that reason, retrieve, and act
             in real-time.
           </p>
@@ -25,7 +25,7 @@ export function About() {
             My focus sits at the intersection of <strong>backend reliability</strong> and{" "}
             <strong>generative AI</strong>: production-grade RAG pipelines, vector search,
             multi-step agents using MCP, and the boring-but-critical infrastructure that keeps it
-            all running — Kafka, queues, observability, CI/CD.
+            all running Kafka, queues, observability, CI/CD.
           </p>
 
           <div className="grid sm:grid-cols-2 gap-4 pt-6">

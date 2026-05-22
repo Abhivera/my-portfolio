@@ -23,7 +23,7 @@ function projectCardHref(p: Project): string | undefined {
 
 const projects: Project[] = [
   {
-    title: "Dietly",
+    title: "Calovia",
     tagline: "AI Nutrition Platform",
     description:
       "Shipped multimodal meal photo → LLM → structured nutrition output (calories, macros, meal name, exercise hints) behind a provider-abstracted vision service (OpenAI-compatible / Gemini / Bedrock). Owned the FastAPI pipeline (upload, analysis persistence, public rate-limited demo API) and domain APIs that consume model output for net calories, streaks, and meal history. React/Redux client surfaces analysis results, meal logging, and Chart.js analytics over the REST API.",
@@ -31,13 +31,13 @@ const projects: Project[] = [
     accent: "var(--accent)",
     status: "Product",
     links: [
-      { label: "Dietly", href: "https://dietly.org" },
-      { label: "Frontend", href: "https://github.com/Abhivera/dietly-frontend" },
-      { label: "Backend", href: "https://github.com/Abhivera/dietly-backend" },
+      { label: "Calovia", href: "https://calovia.app" },
+      { label: "Frontend", href: "https://github.com/Abhivera/calovia-frontend" },
+      { label: "Backend", href: "https://github.com/Abhivera/calovia-backend" },
     ],
-    cardHref: "https://dietly.org",
+    cardHref: "https://calovia.app",
     iconSrc: "/dietly-icon.png",
-    iconAlt: "Dietly — bowl with fresh meal ingredients",
+    iconAlt: "Calovia — bowl with fresh meal ingredients",
   },
   {
     title: "Streammeo",
@@ -78,7 +78,7 @@ export function Projects() {
         <div className="flex items-end justify-between flex-wrap gap-4 mb-12 sm:mb-16">
           <div>
             <span className="inline-flex w-fit items-center rounded-full border border-[color:var(--aqua-400)]/30 bg-[color:var(--aqua-50)]/70 px-3 py-1 text-xs font-semibold tracking-wide text-[color:var(--aqua-700)]">
-              ※ Personal Projects
+              ※ Projects
             </span>
             <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
               Personal Projects.

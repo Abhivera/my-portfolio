@@ -22,9 +22,9 @@ const groups = [
     items: ["RAG", "LangChain", "Vector Search", "AI Agents (MCP)", "Claude", "HuggingFace"],
   },
   {
-    title: "APIs & Frontend",
+    title: "Frontend & APIs",
     color: "var(--secondary)",
-    items: ["REST", "GraphQL", "gRPC", "Webhooks", "React"],
+    items: ["REST", "GraphQL", "gRPC", "Webhooks", "React", "Next.js"],
   },
   {
     title: "Cloud & DevOps",
@@ -38,10 +38,10 @@ export function Skills() {
     <section id="skills" className="py-12 sm:py-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-12 sm:mb-16 max-w-2xl">
         <span className="inline-flex w-fit items-center rounded-full border border-[color:var(--aqua-400)]/30 bg-[color:var(--aqua-50)]/70 px-3 py-1 text-xs font-semibold tracking-wide text-[color:var(--aqua-700)]">
-          ※ Toolkit
+          ※ Skillset
         </span>
         <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
-          The tools I reach for.
+          The skills I possess
         </h2>
       </div>
 
