@@ -40,7 +40,7 @@ export function Experience() {
               ※ Experience
             </span>
             <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
-              Where I've shipped.
+              Work Experience
             </h2>
           </div>
           <p className="text-muted-foreground max-w-sm">

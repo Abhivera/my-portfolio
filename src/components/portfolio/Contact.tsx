@@ -65,7 +65,7 @@ export function Contact() {
                   </span>
                 </a>
                 <a
-                  href="https://www.linkedin.com/in/abhijit-verma-532996165/"
+                  href="https://www.linkedin.com/in/abhijit-verma/"
                   target="_blank"
                   rel="noreferrer"
                   aria-label="LinkedIn"
