@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Terminal, Mail } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 const links = [
   { href: "#about", label: "About" },
@@ -47,6 +48,14 @@ export function Nav() {
               </a>
             </li>
           ))}
+          <li>
+            <Link
+              to="/blog"
+              className="px-4 py-2.5 rounded-full text-foreground/80 hover:text-foreground hover:bg-card/60 hover:shadow-sm transition-all duration-200 font-medium"
+            >
+              Blog
+            </Link>
+          </li>
         </ul>
         <a
           href="mailto:abhijitakadeveloper@gmail.com"

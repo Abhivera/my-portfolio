@@ -36,14 +36,14 @@ const projects: Project[] = [
       { label: "Backend", href: "https://github.com/Abhivera/calovia-backend" },
     ],
     cardHref: "https://calovia.app",
-    iconSrc: "/dietly-icon.png",
+    iconSrc: "/calovia-logo.png",
     iconAlt: "Calovia — bowl with fresh meal ingredients",
   },
   {
     title: "Streammeo",
     tagline: "Embeddable voice customer-support agent",
     description:
-      "Built an embeddable voice customer-support agent merchants add with a script tag. End users speak in regional languages; the stack runs STT → LLM (with tool calls) → TTS and streams audio back. Shipped a React dashboard for sessions, settings, and FAQs, plus a vanilla JS widget (Shadow DOM) for host-site isolation.",
+      "Built an embeddable voice and chat customer-support agent merchants add with a script tag. End users speak in regional languages; the stack runs STT → LLM (with tool calls) → TTS and streams audio back. Shipped a React dashboard for sessions, settings, and FAQs, plus a vanilla JS widget (Shadow DOM) for host-site isolation.",
     tags: ["React", "Node.js", "TypeScript", "Anthropic", "LLM"],
     accent: "var(--accent)",
     status: "Product",
@@ -51,7 +51,7 @@ const projects: Project[] = [
       { label: "Streammeo", href: "https://streammeo.com" },
       { label: "POC on GitHub", href: "https://github.com/Abhivera/streammeo" },
     ],
-    iconSrc: "/stremmeo-logo.png",
+    iconSrc: "/streammeo-logo.png",
     iconAlt: "Streammeo — microphone and sound waves mark",
   },
   {

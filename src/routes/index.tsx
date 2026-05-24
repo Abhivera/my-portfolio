@@ -9,6 +9,7 @@ import { Skills } from "@/components/portfolio/Skills";
 import { Projects } from "@/components/portfolio/Projects";
 import { Education } from "@/components/portfolio/Education";
 import { Contact } from "@/components/portfolio/Contact";
+import { BlogSection } from "@/components/portfolio/BlogSection";
 
 export const Route = createFileRoute("/")({
   loader: async () => await getServerStatus(),
@@ -44,6 +45,7 @@ function Index() {
       <About />
       <Experience />
       <Projects />
+      <BlogSection />
       <Skills />
       <Education />
       <Contact />
