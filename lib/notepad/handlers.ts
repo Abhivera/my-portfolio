@@ -38,7 +38,7 @@ export async function handleNotepadAuth(request: Request): Promise<Response> {
         return errorResponse("Password is required", 400);
       }
 
-      const valid = await checkPassword(body.password);
+      const valid = checkPassword(body.password);
       if (!valid) {
         return jsonResponse(
           { success: false, error: "Incorrect password" },
@@ -65,7 +65,11 @@ export async function handleNotepadAuth(request: Request): Promise<Response> {
     return errorResponse("Method not allowed", 405);
   } catch (err) {
     console.error("[notepad/auth]", err);
-    return errorResponse("Internal server error", 500);
+    const message =
+      err instanceof Error && err.message.includes("NOTEPAD_PASSWORD")
+        ? err.message
+        : "Internal server error";
+    return errorResponse(message, 500);
   }
 }
 

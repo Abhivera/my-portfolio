@@ -26,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const request = new Request(url, {
     method: req.method,
     headers: req.headers as HeadersInit,
-    body: body?.length ? body : undefined,
+    body: body?.length ? new Uint8Array(body) : undefined,
   });
 
   const response = await handleBlogUpload(request);

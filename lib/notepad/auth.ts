@@ -9,52 +9,32 @@ export type NotepadDoc = {
   updatedAt: Date;
 };
 
-type NotepadSettingsDoc = {
-  _id: "auth";
-  passwordHash: string;
-};
-
 function hashPassword(password: string): string {
   return createHash("sha256").update(password).digest("hex");
 }
 
-function verifyPassword(input: string, storedHash: string): boolean {
+function verifyPassword(input: string, expectedPlain: string): boolean {
   const inputHash = hashPassword(input);
+  const expectedHash = hashPassword(expectedPlain);
   const a = Buffer.from(inputHash, "utf8");
-  const b = Buffer.from(storedHash, "utf8");
+  const b = Buffer.from(expectedHash, "utf8");
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
 }
 
-export async function getOrCreatePasswordHash(): Promise<string> {
-  const db = await getDb();
-  const settings = await db
-    .collection<NotepadSettingsDoc>("notepad_settings")
-    .findOne({ _id: "auth" });
-
-  if (settings?.passwordHash) {
-    return settings.passwordHash;
-  }
-
-  const envPassword = process.env.NOTEPAD_PASSWORD;
-  if (!envPassword) {
+function getConfiguredPassword(): string {
+  const password = process.env.NOTEPAD_PASSWORD?.trim();
+  if (!password) {
     throw new Error(
-      "Notepad password not configured. Set NOTEPAD_PASSWORD in environment.",
+      "NOTEPAD_PASSWORD is not set. Add it in Vercel → Settings → Environment Variables.",
     );
   }
-
-  const passwordHash = hashPassword(envPassword);
-  await db.collection<NotepadSettingsDoc>("notepad_settings").updateOne(
-    { _id: "auth" },
-    { $set: { _id: "auth", passwordHash } },
-    { upsert: true },
-  );
-  return passwordHash;
+  return password;
 }
 
-export async function checkPassword(password: string): Promise<boolean> {
-  const storedHash = await getOrCreatePasswordHash();
-  return verifyPassword(password, storedHash);
+export function checkPassword(password: string): boolean {
+  const configured = getConfiguredPassword();
+  return verifyPassword(password.trim(), configured);
 }
 
 export async function getNotepadContent(): Promise<{
