@@ -1,45 +1,76 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { getBlogPost, blogPosts, formatDate } from "@/lib/blog-data";
+import { useEffect, useState } from "react";
+import { formatDate, type BlogPost } from "@/lib/blog-data";
+import { fetchPublishedPost, fetchPublishedPosts } from "@/lib/blog-client";
 import { Nav } from "@/components/portfolio/Nav";
 
 export const Route = createFileRoute("/blog/$slug")({
-  loader: ({ params }) => {
-    const post = getBlogPost(params.slug);
-    if (!post) throw notFound();
-    return post;
-  },
-  component: BlogPost,
-  head: ({ loaderData }) => ({
+  component: BlogPostPage,
+  head: ({ params }) => ({
     meta: [
-      { title: `${loaderData?.title ?? "Post"} | Abhijit Verma` },
-      {
-        name: "description",
-        content: loaderData?.excerpt ?? "",
-      },
-      { property: "og:title", content: `${loaderData?.title} | Abhijit Verma` },
-      { property: "og:description", content: loaderData?.excerpt ?? "" },
+      { title: `${params.slug.replace(/-/g, " ")} | Abhijit Verma` },
       { property: "og:type", content: "article" },
-      {
-        property: "article:published_time",
-        content: loaderData?.date ?? "",
-      },
     ],
   }),
 });
 
-function BlogPost() {
-  const post = Route.useLoaderData();
+function BlogPostPage() {
+  const { slug } = Route.useParams();
+  const [post, setPost] = useState<BlogPost | null>(null);
+  const [morePosts, setMorePosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [missing, setMissing] = useState(false);
 
-  // Other posts for the "more reading" section
-  const morePosts = blogPosts
-    .filter((p) => p.slug !== post.slug)
-    .slice(0, 2);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      try {
+        const [fetchedPost, allPosts] = await Promise.all([
+          fetchPublishedPost(slug),
+          fetchPublishedPosts(),
+        ]);
+        if (cancelled) return;
+        if (!fetchedPost) {
+          setMissing(true);
+          return;
+        }
+        setPost(fetchedPost);
+        setMorePosts(allPosts.filter((p) => p.slug !== slug).slice(0, 2));
+        document.title = `${fetchedPost.title} | Abhijit Verma`;
+      } catch {
+        if (!cancelled) setMissing(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen">
+        <Nav />
+        <div className="max-w-3xl mx-auto px-4 pt-40 pb-24">
+          <p className="text-sm text-muted-foreground">Loading post…</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (missing || !post) {
+    throw notFound();
+  }
 
   return (
     <main className="min-h-screen">
       <Nav />
 
-      {/* Article header */}
       <article>
         <header className="pt-32 pb-10 sm:pt-40 sm:pb-14">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -50,7 +81,14 @@ function BlogPost() {
               ← All posts
             </Link>
 
-            {/* Tags */}
+            {post.coverImageUrl && (
+              <img
+                src={post.coverImageUrl}
+                alt=""
+                className="w-full rounded-2xl border mb-8 max-h-80 object-cover"
+              />
+            )}
+
             <div className="flex flex-wrap gap-2 mb-6">
               {post.tags.map((tag) => (
                 <span
@@ -69,7 +107,6 @@ function BlogPost() {
               {post.excerpt}
             </p>
 
-            {/* Meta row */}
             <div className="mt-8 flex items-center gap-4 text-sm text-muted-foreground border-t border-border pt-6">
               <div className="flex items-center gap-2.5">
                 <span className="h-8 w-8 rounded-full bg-gradient-sunset flex items-center justify-center text-xs font-bold text-white">
@@ -85,7 +122,6 @@ function BlogPost() {
           </div>
         </header>
 
-        {/* Article body */}
         <div className="pb-16">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
             <div
@@ -96,7 +132,6 @@ function BlogPost() {
         </div>
       </article>
 
-      {/* More posts */}
       {morePosts.length > 0 && (
         <section className="border-t border-border pb-24">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16">
