@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getServerStatus } from "@/lib/server-utils";
 import { Nav } from "@/components/portfolio/Nav";
 import { Hero } from "@/components/portfolio/Hero";
 import { Marquee } from "@/components/portfolio/Marquee";
@@ -12,7 +11,6 @@ import { Contact } from "@/components/portfolio/Contact";
 import { BlogSection } from "@/components/portfolio/BlogSection";
 
 export const Route = createFileRoute("/")({
-  loader: async () => await getServerStatus(),
   component: Index,
   head: () => ({
     meta: [

@@ -1,5 +1,7 @@
+import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
 import { handleNotepadAuth, handleNotepadContent } from "../notepad/handlers";
+import { handleTodoContent } from "../todo/handlers";
 import {
   handleBlogAdmin,
   handleBlogAuth,
@@ -12,7 +14,7 @@ function getPathname(url: string): string {
   return url.split("?")[0] ?? url;
 }
 
-function readBody(req: Connect.IncomingMessage): Promise<Buffer> {
+function readBody(req: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     req.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
@@ -21,9 +23,7 @@ function readBody(req: Connect.IncomingMessage): Promise<Buffer> {
   });
 }
 
-async function toRequest(
-  req: Connect.IncomingMessage,
-): Promise<Request> {
+async function toRequest(req: IncomingMessage): Promise<Request> {
   const origin = `http://${req.headers.host ?? "localhost"}`;
   const rawBody =
     req.method !== "GET" && req.method !== "HEAD"
@@ -38,7 +38,7 @@ async function toRequest(
 }
 
 async function writeResponse(
-  res: Connect.ServerResponse,
+  res: ServerResponse,
   response: Response,
 ): Promise<void> {
   res.statusCode = response.status;
@@ -48,13 +48,14 @@ async function writeResponse(
   res.end(Buffer.from(await response.arrayBuffer()));
 }
 
-/** Serves /api/notepad/* and /api/blog/* during `vite dev`. */
+/** Serves /api/notepad/*, /api/goal/*, and /api/blog/* during `vite dev`. */
 export function createApiDevMiddleware(): Connect.NextHandleFunction {
   return async (req, res, next) => {
     const pathname = getPathname(req.url ?? "");
 
     if (
       !pathname.startsWith("/api/notepad/") &&
+      !pathname.startsWith("/api/goal/") &&
       !pathname.startsWith("/api/blog/")
     ) {
       next();
@@ -68,6 +69,8 @@ export function createApiDevMiddleware(): Connect.NextHandleFunction {
       response = await handleNotepadAuth(request);
     } else if (pathname.startsWith("/api/notepad/content")) {
       response = await handleNotepadContent(request);
+    } else if (pathname.startsWith("/api/goal/content")) {
+      response = await handleTodoContent(request);
     } else if (pathname.startsWith("/api/blog/auth")) {
       response = await handleBlogAuth(request);
     } else if (pathname.startsWith("/api/blog/posts")) {

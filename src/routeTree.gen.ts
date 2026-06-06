@@ -9,15 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TodoRouteImport } from './routes/todo'
 import { Route as NotepadRouteImport } from './routes/notepad'
+import { Route as GoalRouteImport } from './routes/goal'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as BlogAdminRouteImport } from './routes/blog/admin'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
 
+const TodoRoute = TodoRouteImport.update({
+  id: '/todo',
+  path: '/todo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NotepadRoute = NotepadRouteImport.update({
   id: '/notepad',
   path: '/notepad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GoalRoute = GoalRouteImport.update({
+  id: '/goal',
+  path: '/goal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -43,14 +55,18 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/goal': typeof GoalRoute
   '/notepad': typeof NotepadRoute
+  '/todo': typeof TodoRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog/admin': typeof BlogAdminRoute
   '/blog/': typeof BlogIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/goal': typeof GoalRoute
   '/notepad': typeof NotepadRoute
+  '/todo': typeof TodoRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog/admin': typeof BlogAdminRoute
   '/blog': typeof BlogIndexRoute
@@ -58,22 +74,48 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/goal': typeof GoalRoute
   '/notepad': typeof NotepadRoute
+  '/todo': typeof TodoRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog/admin': typeof BlogAdminRoute
   '/blog/': typeof BlogIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/notepad' | '/blog/$slug' | '/blog/admin' | '/blog/'
+  fullPaths:
+    | '/'
+    | '/goal'
+    | '/notepad'
+    | '/todo'
+    | '/blog/$slug'
+    | '/blog/admin'
+    | '/blog/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/notepad' | '/blog/$slug' | '/blog/admin' | '/blog'
-  id: '__root__' | '/' | '/notepad' | '/blog/$slug' | '/blog/admin' | '/blog/'
+  to:
+    | '/'
+    | '/goal'
+    | '/notepad'
+    | '/todo'
+    | '/blog/$slug'
+    | '/blog/admin'
+    | '/blog'
+  id:
+    | '__root__'
+    | '/'
+    | '/goal'
+    | '/notepad'
+    | '/todo'
+    | '/blog/$slug'
+    | '/blog/admin'
+    | '/blog/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  GoalRoute: typeof GoalRoute
   NotepadRoute: typeof NotepadRoute
+  TodoRoute: typeof TodoRoute
   BlogSlugRoute: typeof BlogSlugRoute
   BlogAdminRoute: typeof BlogAdminRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -81,11 +123,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/todo': {
+      id: '/todo'
+      path: '/todo'
+      fullPath: '/todo'
+      preLoaderRoute: typeof TodoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/notepad': {
       id: '/notepad'
       path: '/notepad'
       fullPath: '/notepad'
       preLoaderRoute: typeof NotepadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/goal': {
+      id: '/goal'
+      path: '/goal'
+      fullPath: '/goal'
+      preLoaderRoute: typeof GoalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -121,7 +177,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  GoalRoute: GoalRoute,
   NotepadRoute: NotepadRoute,
+  TodoRoute: TodoRoute,
   BlogSlugRoute: BlogSlugRoute,
   BlogAdminRoute: BlogAdminRoute,
   BlogIndexRoute: BlogIndexRoute,

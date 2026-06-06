@@ -246,12 +246,3 @@ export function TechIcon({ name, size = 16, className, brandColor = true }: Tech
     </span>
   );
 }
-
-export const hasTechIcon = (name: string) =>
-  Boolean(
-    brandMap[name] ||
-    lucideMap[name] ||
-    name === "AWS" ||
-    name === "AWS SQS" ||
-    name === "OpenAI"
-  );
