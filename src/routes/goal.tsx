@@ -17,11 +17,12 @@ import { Toaster } from "@/components/ui/sonner";
 import { TodoRow } from "@/components/todo/TodoRow";
 import { TodoSidebar } from "@/components/todo/TodoSidebar";
 import {
-  getNotepadAuthStatus,
-  logoutNotepad,
-  verifyNotepadPassword,
-} from "@/lib/notepad-client";
-import { getGoalWorkspace, saveGoalWorkspace } from "@/lib/goal-client";
+  getGoalAuthStatus,
+  getGoalWorkspace,
+  logoutGoal,
+  saveGoalWorkspace,
+  verifyGoalPassword,
+} from "@/lib/goal-client";
 import {
   adjustIndent,
   countProgress,
@@ -30,8 +31,11 @@ import {
   createTodoList,
   defaultWorkspace,
   getActiveList,
+  insertBlocksAt,
   insertItemAfter,
+  looksLikeMarkdown,
   moveItem,
+  parseMarkdownToBlocks,
   removeItemAt,
   toggleItem,
   updateActiveList,
@@ -80,7 +84,7 @@ function GoalPage() {
   const title = activeList?.title ?? "Untitled";
 
   useEffect(() => {
-    getNotepadAuthStatus()
+    getGoalAuthStatus()
       .then((data) => setAuthenticated(data.authenticated))
       .catch(() => setAuthenticated(false))
       .finally(() => setAuthChecked(true));
@@ -122,7 +126,7 @@ function GoalPage() {
     setLoading(true);
     setLoginError(null);
     try {
-      const result = await verifyNotepadPassword(password);
+      const result = await verifyGoalPassword(password);
       if (!result.success) {
         setLoginError(result.error ?? "Incorrect password");
         return;
@@ -182,7 +186,7 @@ function GoalPage() {
       toast.error("Could not save before sign out");
       return;
     }
-    await logoutNotepad();
+    await logoutGoal();
     autosaveReadyRef.current = false;
     setAuthenticated(false);
     setWorkspace(defaultWorkspace());
@@ -266,6 +270,23 @@ function GoalPage() {
     window.requestAnimationFrame(() => {
       inputRefs.current[index]?.focus();
     });
+  };
+
+  const handlePaste = (index: number, e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const text = e.clipboardData.getData("text/plain");
+    if (!looksLikeMarkdown(text)) return;
+
+    e.preventDefault();
+    const { title: parsedTitle, blocks } = parseMarkdownToBlocks(text);
+
+    if (parsedTitle && (title === "Untitled" || title.trim() === "")) {
+      setTitle(parsedTitle);
+    }
+
+    const wasEmpty = items[index]?.text === "";
+    setItems((prev) => insertBlocksAt(prev, index, blocks));
+    focusItem(wasEmpty ? index + blocks.length - 1 : index + blocks.length);
+    toast.success(`Pasted ${blocks.length} item${blocks.length === 1 ? "" : "s"}`);
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -377,7 +398,7 @@ function GoalPage() {
             </div>
             <h1 className="text-2xl font-semibold tracking-tight">Private goals</h1>
             <p className="text-sm text-muted-foreground">
-              Enter the shared password to view and edit your goals.
+              Enter the goals password to view and edit your goals.
             </p>
           </div>
 
@@ -561,6 +582,7 @@ function GoalPage() {
                         setItems((prev) => updateItemText(prev, index, text))
                       }
                       onKeyDown={(e) => handleKeyDown(index, e)}
+                      onPaste={(e) => handlePaste(index, e)}
                       onDelete={() => setItems((prev) => removeItemAt(prev, index))}
                       onDragStart={handleDragStart}
                       onDragOver={handleDragOver}

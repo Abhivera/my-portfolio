@@ -1,4 +1,10 @@
-import { getSessionFromCookieHeader } from "../notepad/session.js";
+import { checkPassword } from "./auth.js";
+import {
+  clearSessionCookieHeader,
+  getSessionFromCookieHeader,
+  sealSession,
+  sessionCookieHeader,
+} from "./session.js";
 import { getTodoWorkspace, saveTodoWorkspace } from "./store.js";
 import type { TodoWorkspaceData } from "./types.js";
 
@@ -36,6 +42,56 @@ function isTodoWorkspace(value: unknown): value is TodoWorkspaceData {
           typeof item.indent === "number",
       ),
   );
+}
+
+export async function handleGoalAuth(request: Request): Promise<Response> {
+  try {
+    if (request.method === "GET") {
+      const session = getSessionFromCookieHeader(
+        request.headers.get("cookie"),
+      );
+      return jsonResponse({ authenticated: Boolean(session?.authenticated) });
+    }
+
+    if (request.method === "POST") {
+      const body = (await request.json()) as { password?: string };
+      if (!body.password?.trim()) {
+        return errorResponse("Password is required", 400);
+      }
+
+      const valid = checkPassword(body.password);
+      if (!valid) {
+        return jsonResponse(
+          { success: false, error: "Incorrect password" },
+          { status: 401 },
+        );
+      }
+
+      const token = sealSession({ authenticated: true });
+      return jsonResponse(
+        { success: true },
+        {
+          headers: { "Set-Cookie": sessionCookieHeader(token) },
+        },
+      );
+    }
+
+    if (request.method === "DELETE") {
+      return jsonResponse(
+        { success: true },
+        { headers: { "Set-Cookie": clearSessionCookieHeader() } },
+      );
+    }
+
+    return errorResponse("Method not allowed", 405);
+  } catch (err) {
+    console.error("[goal/auth]", err);
+    const message =
+      err instanceof Error && err.message.includes("GOAL_PASSWORD")
+        ? err.message
+        : "Internal server error";
+    return errorResponse(message, 500);
+  }
 }
 
 export async function handleTodoContent(request: Request): Promise<Response> {

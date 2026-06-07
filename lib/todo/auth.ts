@@ -14,10 +14,10 @@ function verifyPassword(input: string, expectedPlain: string): boolean {
 }
 
 function getConfiguredPassword(): string {
-  const password = process.env.NOTEPAD_PASSWORD?.trim();
+  const password = process.env.GOAL_PASSWORD?.trim();
   if (!password) {
     throw new Error(
-      "NOTEPAD_PASSWORD is not set. Add it in Vercel → Settings → Environment Variables.",
+      "GOAL_PASSWORD is not set. Add it in Vercel → Settings → Environment Variables.",
     );
   }
   return password;

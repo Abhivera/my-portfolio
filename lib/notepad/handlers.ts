@@ -1,8 +1,6 @@
-import {
-  checkPassword,
-  getNotepadContent,
-  saveNotepadContent,
-} from "./auth.js";
+import { checkPassword } from "./auth.js";
+import { getNotepadWorkspace, saveNotepadWorkspace } from "./store.js";
+import type { NotepadWorkspaceData } from "./types.js";
 import {
   clearSessionCookieHeader,
   getSessionFromCookieHeader,
@@ -81,20 +79,20 @@ export async function handleNotepadContent(request: Request): Promise<Response> 
 
   try {
     if (request.method === "GET") {
-      const data = await getNotepadContent();
+      const data = await getNotepadWorkspace();
       return jsonResponse(data);
     }
 
     if (request.method === "POST") {
-      const body = (await request.json()) as { content?: string };
-      if (typeof body.content !== "string") {
-        return errorResponse("Content is required", 400);
-      }
-      if (body.content.length > 500_000) {
-        return errorResponse("Content too large", 400);
+      const body = (await request.json()) as Partial<NotepadWorkspaceData>;
+      if (!Array.isArray(body.notes) || typeof body.activeNoteId !== "string") {
+        return errorResponse("Invalid workspace payload", 400);
       }
 
-      const updatedAt = await saveNotepadContent(body.content);
+      const updatedAt = await saveNotepadWorkspace({
+        notes: body.notes,
+        activeNoteId: body.activeNoteId,
+      });
       return jsonResponse({ success: true, updatedAt });
     }
 

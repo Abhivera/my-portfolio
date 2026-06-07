@@ -12,6 +12,9 @@
     "api/notepad/*.ts": {
       "maxDuration": 15
     },
+    "api/goal/*.ts": {
+      "maxDuration": 15
+    },
     "api/blog/*.ts": {
       "maxDuration": 15
     }

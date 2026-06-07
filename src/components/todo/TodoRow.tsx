@@ -11,6 +11,7 @@ type TodoRowProps = {
   onToggle: () => void;
   onTextChange: (text: string) => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onPaste: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDelete: () => void;
   onDragStart: (index: number) => void;
   onDragOver: (index: number) => void;
@@ -28,6 +29,7 @@ export function TodoRow({
   onToggle,
   onTextChange,
   onKeyDown,
+  onPaste,
   onDelete,
   onDragStart,
   onDragOver,
@@ -79,6 +81,7 @@ export function TodoRow({
         value={item.text}
         onChange={(e) => onTextChange(e.target.value)}
         onKeyDown={onKeyDown}
+        onPaste={onPaste}
         onFocus={onFocus}
         rows={1}
         placeholder={isHeading ? "Heading" : "Goal"}

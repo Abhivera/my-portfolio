@@ -1,3 +1,5 @@
+import type { NotepadWorkspaceData } from "../../lib/notepad/types";
+
 const AUTH_API = "/api/notepad/auth";
 const CONTENT_API = "/api/notepad/content";
 
@@ -42,22 +44,21 @@ export async function logoutNotepad(): Promise<void> {
   await fetch(AUTH_API, { method: "DELETE", credentials: "include" });
 }
 
-export async function getNotepadContent(): Promise<{
-  content: string;
-  updatedAt: string | null;
-}> {
+export async function getNotepadWorkspace(): Promise<
+  NotepadWorkspaceData & { updatedAt: string | null }
+> {
   const res = await fetch(CONTENT_API, { credentials: "include" });
   return parseJson(res);
 }
 
-export async function saveNotepadContent(
-  content: string,
+export async function saveNotepadWorkspace(
+  workspace: NotepadWorkspaceData,
 ): Promise<{ success: true; updatedAt: string }> {
   const res = await fetch(CONTENT_API, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify(workspace),
   });
   return parseJson(res);
 }
