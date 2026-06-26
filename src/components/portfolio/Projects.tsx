@@ -56,10 +56,10 @@ const projects: Project[] = [
   },
   {
     title: "GitClaw",
-    tagline: "Local GitHub, GitLab & Bitbucket backup scheduler",
+    tagline: "Self-hosted AI pull request reviewer",
     description:
-      "Back up GitHub, GitLab (including self-managed URLs), and Bitbucket from online hosting into local storage you choose—clone, fetch, and pull to SSD, HDD, or network paths; repos stay as normal git folders on disk. Filters, parallel jobs with tunable concurrency for memory and CPU headroom, and per-repo progress in the UI. Schedule daily, weekly, or monthly runs alongside system tray integration. Incremental updates keep clones fresh. Open-source desktop app (MIT) for Windows, Linux, and macOS.",
-    tags: ["GitHub", "GitLab", "Bitbucket", "Electron"],
+      "An open source, self-hosted AI reviewer that reads your diffs, not your code, so nothing ever leaves your infrastructure. Webhooks fire on open and update, and GitClaw diffs only what changed to leave inline comments on the lines that matter: injection risks and unsafe patterns, hot-path performance regressions, and maintainability issues like complexity and duplication. Reply to @gitclaw in a PR comment for in-context follow-ups, tune behavior per repo with a .gitclaw.yaml, and track recurring findings across teams in a dashboard. Pluggable AI backend works with OpenRouter, Anthropic (Claude), Groq, any OpenAI-compatible endpoint, or a local Ollama instance. MIT licensed.",
+    tags: ["GitHub", "GitLab", "Bitbucket", "LLM", "Self-hosted"],
     accent: "var(--accent)",
     status: "Open source",
     links: [
