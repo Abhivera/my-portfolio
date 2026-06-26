@@ -41,10 +41,10 @@ const projects: Project[] = [
   },
   {
     title: "Streammeo",
-    tagline: "Embeddable voice customer-support agent",
+    tagline: "AI customer service & ticketing platform",
     description:
-      "Built an embeddable voice and chat customer-support agent merchants add with a script tag. End users speak in regional languages; the stack runs STT → LLM (with tool calls) → TTS and streams audio back. Shipped a React dashboard for sessions, settings, and FAQs, plus a vanilla JS widget (Shadow DOM) for host-site isolation.",
-    tags: ["React", "Node.js", "TypeScript", "Anthropic", "LLM"],
+      "One support desk that unifies email, live chat, web forms, and API channels into a single ticket queue, so agents never switch tools mid-shift. Claude drafts suggested replies from ticket context for agents to review and send, while SLA policies flag first-response and resolution breaches automatically on tickets and in the dashboard. Real-time collaboration shows who is viewing or typing to cut duplicate replies, an embeddable chat widget converts visitor sessions into tickets, and a self-service portal lets customers track and rate their own tickets. Tiered plans with Razorpay billing for growing SaaS support teams.",
+    tags: ["React", "Node.js", "TypeScript", "Anthropic", "Razorpay"],
     accent: "var(--accent)",
     status: "Product",
     links: [
