@@ -23,21 +23,19 @@ function projectCardHref(p: Project): string | undefined {
 
 const projects: Project[] = [
   {
-    title: "Calovia",
-    tagline: "AI Nutrition Platform",
+    title: "GitClaw",
+    tagline: "Self-hosted AI pull request reviewer",
     description:
-      "Shipped multimodal meal photo → LLM → structured nutrition output (calories, macros, meal name, exercise hints) behind a provider-abstracted vision service (OpenAI-compatible / Gemini / Bedrock). Owned the FastAPI pipeline (upload, analysis persistence, public rate-limited demo API) and domain APIs that consume model output for net calories, streaks, and meal history. React/Redux client surfaces analysis results, meal logging, and Chart.js analytics over the REST API.",
-    tags: ["FastAPI", "React", "Redux", "LLM", "PostgreSQL"],
+      "An open source, self-hosted AI reviewer that reads your diffs, not your code, so nothing ever leaves your infrastructure. Webhooks fire on open and update, and GitClaw diffs only what changed to leave inline comments on the lines that matter: injection risks and unsafe patterns, hot-path performance regressions, and maintainability issues like complexity and duplication. Reply to @gitclaw in a PR comment for in-context follow-ups, tune behavior per repo with a .gitclaw.yaml, and track recurring findings across teams in a dashboard. Pluggable AI backend works with OpenRouter, Anthropic (Claude), Groq, any OpenAI-compatible endpoint, or a local Ollama instance. MIT licensed.",
+    tags: ["GitHub", "GitLab", "Bitbucket", "LLM", "Self-hosted"],
     accent: "var(--accent)",
-    status: "Product",
+    status: "Open source",
     links: [
-      { label: "Calovia", href: "https://calovia.app" },
-      { label: "Frontend", href: "https://github.com/Abhivera/calovia-frontend" },
-      { label: "Backend", href: "https://github.com/Abhivera/calovia-backend" },
+      { label: "GitClaw", href: "https://gitclaw.online" },
+      { label: "Open source on GitHub", href: "https://github.com/Abhivera/gitclaw" },
     ],
-    cardHref: "https://calovia.app",
-    iconSrc: "/calovia-logo.png",
-    iconAlt: "Calovia — bowl with fresh meal ingredients",
+    iconSrc: "/gitclaw-icon.png",
+    iconAlt: "GitClaw — lobster claw and git mark",
   },
   {
     title: "Streammeo",
@@ -55,19 +53,21 @@ const projects: Project[] = [
     iconAlt: "Streammeo — microphone and sound waves mark",
   },
   {
-    title: "GitClaw",
-    tagline: "Self-hosted AI pull request reviewer",
+    title: "Calovia",
+    tagline: "AI Nutrition Platform",
     description:
-      "An open source, self-hosted AI reviewer that reads your diffs, not your code, so nothing ever leaves your infrastructure. Webhooks fire on open and update, and GitClaw diffs only what changed to leave inline comments on the lines that matter: injection risks and unsafe patterns, hot-path performance regressions, and maintainability issues like complexity and duplication. Reply to @gitclaw in a PR comment for in-context follow-ups, tune behavior per repo with a .gitclaw.yaml, and track recurring findings across teams in a dashboard. Pluggable AI backend works with OpenRouter, Anthropic (Claude), Groq, any OpenAI-compatible endpoint, or a local Ollama instance. MIT licensed.",
-    tags: ["GitHub", "GitLab", "Bitbucket", "LLM", "Self-hosted"],
+      "Shipped multimodal meal photo → LLM → structured nutrition output (calories, macros, meal name, exercise hints) behind a provider-abstracted vision service (OpenAI-compatible / Gemini / Bedrock). Owned the FastAPI pipeline (upload, analysis persistence, public rate-limited demo API) and domain APIs that consume model output for net calories, streaks, and meal history. React/Redux client surfaces analysis results, meal logging, and Chart.js analytics over the REST API.",
+    tags: ["FastAPI", "React", "Redux", "LLM", "PostgreSQL"],
     accent: "var(--accent)",
-    status: "Open source",
+    status: "Product",
     links: [
-      { label: "GitClaw", href: "https://gitclaw.online" },
-      { label: "Open source on GitHub", href: "https://github.com/Abhivera/gitclaw" },
+      { label: "Calovia", href: "https://calovia.app" },
+      { label: "Frontend", href: "https://github.com/Abhivera/calovia-frontend" },
+      { label: "Backend", href: "https://github.com/Abhivera/calovia-backend" },
     ],
-    iconSrc: "/gitclaw-icon.png",
-    iconAlt: "GitClaw — lobster claw and git mark",
+    cardHref: "https://calovia.app",
+    iconSrc: "/calovia-logo.png",
+    iconAlt: "Calovia — bowl with fresh meal ingredients",
   },
 ];
 
