@@ -42,7 +42,7 @@ function defaultWorkspace(): NotepadWorkspaceData {
   return { notes: [note], activeNoteId: note.id };
 }
 
-function migrateLegacyDoc(doc: LegacyNotepadDoc): NotepadWorkspaceData {
+function migrateLegacyDoc(doc: Omit<LegacyNotepadDoc, "_id">): NotepadWorkspaceData {
   const now = doc.updatedAt?.toISOString() ?? new Date().toISOString();
   const note: NotepadNote = {
     id: randomUUID(),

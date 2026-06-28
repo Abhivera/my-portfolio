@@ -45,7 +45,7 @@ export function sanitizeWorkspace(data: TodoWorkspaceData): TodoWorkspaceData {
   return { lists, activeListId };
 }
 
-function migrateLegacyDoc(doc: LegacyTodoDoc): TodoWorkspaceData {
+function migrateLegacyDoc(doc: Omit<LegacyTodoDoc, "_id">): TodoWorkspaceData {
   const now = new Date().toISOString();
   const list: TodoList = {
     id: randomUUID(),
