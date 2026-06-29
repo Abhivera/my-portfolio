@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Lock, LogOut, StickyNote } from "lucide-react";
+import { Eye, Lock, LogOut, Pencil, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NotepadSidebar } from "@/components/notepad/NotepadSidebar";
+import { MarkdownPreview } from "@/components/notepad/MarkdownPreview";
 import {
   getNotepadAuthStatus,
   getNotepadWorkspace,
@@ -49,6 +50,7 @@ function NotepadPage() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [contentLoading, setContentLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
 
   const lastSavedRef = useRef<string>(JSON.stringify(defaultNotepadWorkspace()));
   const autosaveReadyRef = useRef(false);
@@ -352,10 +354,40 @@ function NotepadPage() {
             </p>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => void handleLogout()}>
-          <LogOut className="h-4 w-4 mr-1.5" />
-          Sign out
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-md border p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode("edit")}
+              className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                viewMode === "edit"
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              aria-pressed={viewMode === "edit"}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("preview")}
+              className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                viewMode === "preview"
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              aria-pressed={viewMode === "preview"}
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Preview
+            </button>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => void handleLogout()}>
+            <LogOut className="h-4 w-4 mr-1.5" />
+            Sign out
+          </Button>
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
@@ -374,6 +406,13 @@ function NotepadPage() {
           <div className="mx-auto max-w-4xl w-full h-full flex flex-col gap-4">
             {contentLoading ? (
               <p className="text-sm text-muted-foreground">Loading notes…</p>
+            ) : viewMode === "preview" ? (
+              <>
+                <h2 className="w-full text-2xl font-semibold tracking-tight">
+                  {title || "Untitled"}
+                </h2>
+                <MarkdownPreview content={content} className="flex-1" />
+              </>
             ) : (
               <>
                 <input
@@ -386,7 +425,7 @@ function NotepadPage() {
                 <Textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Start writing…"
+                  placeholder="Start writing… Markdown supported."
                   className="min-h-[calc(100vh-12rem)] flex-1 resize-none font-mono text-sm leading-relaxed"
                 />
               </>
