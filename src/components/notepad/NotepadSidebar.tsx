@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { NotepadNote } from "../../lib/notepad/types";
+import type { NotepadNote } from "../../../lib/notepad/types";
 
 type NotepadSidebarProps = {
   notes: NotepadNote[];
@@ -60,7 +60,7 @@ export function NotepadSidebar({
                   <span className="truncate">{note.title || "Untitled"}</span>
                   {note.content.trim() && (
                     <span className="truncate text-[11px] font-normal text-muted-foreground">
-                      {note.content.split("\n").find((l) => l.trim()) ?? ""}
+                      {note.content.split("\n").find((line: string) => line.trim()) ?? ""}
                     </span>
                   )}
                 </button>
@@ -69,7 +69,11 @@ export function NotepadSidebar({
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="absolute right-1 top-1.5 flex h-6 w-6 items-center justify-center rounded opacity-0 transition-opacity hover:bg-background group-hover:opacity-100 data-[state=open]:opacity-100"
+                      className={`absolute right-1 top-1.5 flex h-6 w-6 items-center justify-center rounded transition-opacity hover:bg-background data-[state=open]:opacity-100 ${
+                        active
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-100"
+                      }`}
                       aria-label="Note options"
                       onClick={(e) => e.stopPropagation()}
                     >

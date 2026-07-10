@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { getDb } from "./db.js";
 import {
   MAX_CONTENT_LENGTH,
+  MAX_INK_DATA_LENGTH,
   MAX_NOTES,
   MAX_TITLE_LENGTH,
   WORKSPACE_ID,
@@ -12,10 +13,12 @@ import {
 } from "./types.js";
 
 function sanitizeNote(note: NotepadNote): NotepadNote {
+  const inkData = note.inkData?.trim();
   return {
     id: note.id.slice(0, 64),
     title: note.title.slice(0, MAX_TITLE_LENGTH),
     content: note.content.slice(0, MAX_CONTENT_LENGTH),
+    inkData: inkData ? inkData.slice(0, MAX_INK_DATA_LENGTH) : undefined,
     createdAt: note.createdAt,
     updatedAt: note.updatedAt,
   };
