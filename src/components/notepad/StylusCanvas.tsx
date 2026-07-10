@@ -3,7 +3,6 @@ import {
   Eraser,
   Hand,
   Pen,
-  PenLine,
   RotateCcw,
   ScanText,
   Trash2,
@@ -350,16 +349,36 @@ export function StylusCanvas({
     schedulePaint();
   };
 
+  const snapshotCanvasForOcr = (): string | null => {
+    const source = canvasRef.current;
+    if (!source || source.width < 2 || source.height < 2) return null;
+
+    const output = document.createElement("canvas");
+    output.width = source.width;
+    output.height = source.height;
+    const ctx = output.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, output.width, output.height);
+    ctx.drawImage(source, 0, 0);
+    return output.toDataURL("image/png");
+  };
+
   const handleConvertToText = async () => {
-    if (readOnly || isConverting || !onTextRecognized || handwritingMode !== "toText") {
-      return;
+    if (readOnly || isConverting || !onTextRecognized) return;
+
+    if (handwritingMode !== "toText") {
+      onHandwritingModeChange?.("toText");
     }
+
     if (inkRef.current.strokes.length === 0) {
       toast.error("Write something first");
       return;
     }
 
-    const imageDataUrl = exportInkImageForOcr(inkRef.current);
+    const imageDataUrl =
+      exportInkImageForOcr(inkRef.current) ?? snapshotCanvasForOcr();
     if (!imageDataUrl) {
       toast.error("Could not prepare handwriting for recognition");
       return;
@@ -373,14 +392,23 @@ export function StylusCanvas({
       });
 
       if (!text) {
-        toast.error("No text recognized. Try writing larger and clearer.");
+        toast.error(
+          "Couldn’t read that. Write letters/words larger, then Convert again.",
+        );
         return;
       }
 
       onTextRecognized(text);
-      toast.success("Handwriting converted to text");
-    } catch {
-      toast.error("Text recognition failed. Try again.");
+      // Clear ink after successful conversion so the next phrase is clean.
+      inkRef.current = { version: 1, strokes: [] };
+      commitInk();
+      schedulePaint();
+      toast.success(
+        `Converted: “${text.length > 40 ? `${text.slice(0, 40)}…` : text}”`,
+      );
+    } catch (error) {
+      console.error("[ocr]", error);
+      toast.error("Text recognition failed. Check your connection and try again.");
     } finally {
       setIsConverting(false);
       setOcrProgress(null);
@@ -392,47 +420,63 @@ export function StylusCanvas({
       {!readOnly && (
         <div className="flex shrink-0 flex-col gap-2">
           {onHandwritingModeChange && (
-            <div className="grid grid-cols-2 gap-1 rounded-lg border bg-muted/40 p-1">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => onHandwritingModeChange("keep")}
                 className={cn(
-                  "flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+                  "rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
                   handwritingMode === "keep"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                 )}
                 aria-pressed={handwritingMode === "keep"}
               >
-                <PenLine className="h-4 w-4 shrink-0" />
                 Keep ink
               </button>
               <button
                 type="button"
                 onClick={() => onHandwritingModeChange("toText")}
                 className={cn(
-                  "flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+                  "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
                   handwritingMode === "toText"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "border-foreground/20 bg-background text-foreground shadow-sm"
+                    : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
                 )}
                 aria-pressed={handwritingMode === "toText"}
               >
-                <ScanText className="h-4 w-4 shrink-0" />
+                <ScanText className="h-3.5 w-3.5" />
                 To text
               </button>
+              {onTextRecognized && handwritingMode === "toText" && (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => void handleConvertToText()}
+                  disabled={!hasInk || isConverting}
+                >
+                  {isConverting
+                    ? ocrProgress !== null
+                      ? `${ocrProgress}%`
+                      : "…"
+                    : "Convert"}
+                </Button>
+              )}
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            <div className="flex items-center rounded-lg border p-0.5">
+          {/* Tool clusters with dividers */}
+          <div className="flex flex-wrap items-center gap-y-2 rounded-lg border bg-muted/20 px-1.5 py-1">
+            {/* Draw tools */}
+            <div className="flex items-center gap-0.5 px-1">
               <button
                 type="button"
                 onClick={() => setTool("pen")}
                 className={cn(
                   "flex h-9 w-9 items-center justify-center rounded-md transition-colors",
                   tool === "pen"
-                    ? "bg-muted text-foreground"
+                    ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground",
                 )}
                 aria-label="Pen"
@@ -446,7 +490,7 @@ export function StylusCanvas({
                 className={cn(
                   "flex h-9 w-9 items-center justify-center rounded-md transition-colors",
                   tool === "eraser"
-                    ? "bg-muted text-foreground"
+                    ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground",
                 )}
                 aria-label="Eraser"
@@ -456,115 +500,120 @@ export function StylusCanvas({
               </button>
             </div>
 
-            <label className="flex h-9 items-center gap-2 rounded-lg border px-2.5 text-xs text-muted-foreground">
-              <span className="shrink-0">Size</span>
-              <input
-                type="range"
-                min={MIN_STROKE_WIDTH}
-                max={MAX_STROKE_WIDTH}
-                step={0.5}
-                value={strokeWidth}
-                onChange={(e) => setStrokeWidth(Number(e.target.value))}
-                className="h-1.5 w-16 accent-primary sm:w-20"
-              />
-            </label>
+            <div className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden />
 
-            <label className="flex h-9 items-center gap-2 rounded-lg border px-2.5 text-xs text-muted-foreground">
-              <span className="shrink-0">Press</span>
-              <input
-                type="range"
-                min={MIN_PRESSURE_SENSITIVITY}
-                max={MAX_PRESSURE_SENSITIVITY}
-                step={0.1}
-                value={pressureSensitivity}
-                onChange={(e) => setPressureSensitivity(Number(e.target.value))}
-                className="h-1.5 w-16 accent-primary sm:w-20"
-              />
-            </label>
+            {/* Adjustments — filled-track sliders */}
+            <div className="flex flex-wrap items-center gap-3 px-2">
+              <label className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                Size
+                <input
+                  type="range"
+                  min={MIN_STROKE_WIDTH}
+                  max={MAX_STROKE_WIDTH}
+                  step={0.5}
+                  value={strokeWidth}
+                  onChange={(e) => setStrokeWidth(Number(e.target.value))}
+                  className="stylus-slider h-2 w-28 cursor-pointer appearance-none rounded-full bg-muted sm:w-32"
+                  style={{
+                    background: `linear-gradient(to right, var(--foreground) ${
+                      ((strokeWidth - MIN_STROKE_WIDTH) /
+                        (MAX_STROKE_WIDTH - MIN_STROKE_WIDTH)) *
+                      100
+                    }%, var(--muted) 0%)`,
+                  }}
+                />
+              </label>
+              <label className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                Press
+                <input
+                  type="range"
+                  min={MIN_PRESSURE_SENSITIVITY}
+                  max={MAX_PRESSURE_SENSITIVITY}
+                  step={0.1}
+                  value={pressureSensitivity}
+                  onChange={(e) => setPressureSensitivity(Number(e.target.value))}
+                  className="stylus-slider h-2 w-28 cursor-pointer appearance-none rounded-full bg-muted sm:w-32"
+                  style={{
+                    background: `linear-gradient(to right, var(--foreground) ${
+                      ((pressureSensitivity - MIN_PRESSURE_SENSITIVITY) /
+                        (MAX_PRESSURE_SENSITIVITY - MIN_PRESSURE_SENSITIVITY)) *
+                      100
+                    }%, var(--muted) 0%)`,
+                  }}
+                />
+              </label>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => setStylusOnly((value) => !value)}
-              className={cn(
-                "flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-colors",
-                stylusOnly
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              aria-pressed={stylusOnly}
-              title={
-                stylusOnly
-                  ? "Only stylus draws (palm rejection)"
-                  : "Stylus and finger can draw"
-              }
-            >
-              {stylusOnly ? (
-                <Pen className="h-3.5 w-3.5" />
-              ) : (
-                <Hand className="h-3.5 w-3.5" />
-              )}
-              <span className="hidden sm:inline">
-                {stylusOnly ? "Stylus only" : "Finger OK"}
-              </span>
-            </button>
+            <div className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden />
 
-            <div className="ml-auto flex items-center gap-1">
-              {handwritingMode === "toText" && onTextRecognized && (
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-9"
-                  onClick={() => void handleConvertToText()}
-                  disabled={!hasInk || isConverting}
-                >
-                  <ScanText className="h-4 w-4 mr-1.5" />
-                  {isConverting
-                    ? ocrProgress !== null
-                      ? `${ocrProgress}%`
-                      : "…"
-                    : "Convert"}
-                </Button>
-              )}
-              <Button
+            {/* Input mode + help beside it */}
+            <div className="flex flex-col gap-0.5 px-1">
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
-                className="h-9 px-2.5"
+                onClick={() => setStylusOnly((value) => !value)}
+                className={cn(
+                  "flex h-9 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors",
+                  stylusOnly
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+                aria-pressed={stylusOnly}
+                title={
+                  stylusOnly
+                    ? "Only stylus draws (palm rejection)"
+                    : "Stylus and finger can draw"
+                }
+              >
+                {stylusOnly ? (
+                  <Pen className="h-3.5 w-3.5" />
+                ) : (
+                  <Hand className="h-3.5 w-3.5" />
+                )}
+                {stylusOnly ? "Stylus only" : "Finger OK"}
+              </button>
+              {stylusOnly && !penSeen && (
+                <button
+                  type="button"
+                  className="px-1 text-left text-[10px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                  onClick={() => setStylusOnly(false)}
+                >
+                  Not working? Allow finger
+                </button>
+              )}
+            </div>
+
+            <div className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden />
+
+            {/* History — left of canvas edge, clear needs confirm */}
+            <div className="flex items-center gap-0.5 px-1">
+              <button
+                type="button"
                 onClick={handleUndo}
                 disabled={!hasInk}
+                className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
                 aria-label="Undo"
               >
                 <RotateCcw className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-9 px-2.5 text-destructive hover:text-destructive"
-                onClick={handleClear}
-                disabled={!hasInk}
-                aria-label="Clear"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex min-h-4 items-center justify-between gap-2 text-xs text-muted-foreground">
-            <p aria-live="polite">
-              {penStatus ??
-                (handwritingMode === "keep"
-                  ? "Ink stays on this note"
-                  : "Write, then tap Convert")}
-            </p>
-            {stylusOnly && !penSeen && (
+              </button>
               <button
                 type="button"
-                className="shrink-0 underline-offset-2 hover:underline"
-                onClick={() => setStylusOnly(false)}
+                onClick={handleClear}
+                disabled={!hasInk}
+                className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive disabled:opacity-40"
+                aria-label="Clear all ink"
+                title="Clear all ink"
               >
-                Stylus not working? Allow finger
+                <Trash2 className="h-4 w-4" />
               </button>
+            </div>
+
+            {penStatus && (
+              <p
+                className="ml-auto hidden px-2 text-[11px] text-muted-foreground md:block"
+                aria-live="polite"
+              >
+                {penStatus}
+              </p>
             )}
           </div>
         </div>
@@ -573,11 +622,19 @@ export function StylusCanvas({
       <div
         ref={containerRef}
         className={cn(
-          "relative min-h-0 flex-1 overflow-hidden rounded-xl border bg-card",
+          "relative overflow-hidden rounded-xl border bg-card",
           "bg-[radial-gradient(circle_at_1px_1px,color-mix(in_oklab,var(--foreground)_8%,transparent)_1px,transparent_0)] [background-size:18px_18px]",
-          readOnly ? "min-h-[200px] flex-none" : "min-h-[280px]",
+          readOnly ? "min-h-[200px] flex-none" : "min-h-[32vh] md:min-h-[36vh]",
         )}
       >
+        {/* Top margin guide */}
+        {!readOnly && (
+          <div
+            className="pointer-events-none absolute inset-x-4 top-10 border-t border-dashed border-foreground/10"
+            aria-hidden
+          />
+        )}
+
         <canvas
           ref={canvasRef}
           className={cn(
@@ -586,27 +643,17 @@ export function StylusCanvas({
           )}
           style={{ touchAction: "none" }}
         />
+
         {!readOnly && !hasInk && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6">
-            <div className="max-w-sm rounded-xl bg-background/80 px-4 py-3 text-center text-sm text-muted-foreground backdrop-blur-sm">
-              {handwritingMode === "keep" ? (
-                <>
-                  <p className="font-medium text-foreground">Write with your stylus</p>
-                  <p className="mt-1 text-xs">
-                    Handwriting is saved as ink. Use Stylus only for palm rejection.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="font-medium text-foreground">Write, then convert</p>
-                  <p className="mt-1 text-xs">
-                    Tap Convert when you finish a line or paragraph.
-                  </p>
-                </>
-              )}
-            </div>
+          <div className="pointer-events-none absolute inset-x-0 top-12 flex justify-start px-6">
+            <p className="text-sm text-muted-foreground/50">
+              {handwritingMode === "keep"
+                ? "Start writing here — ink stays on this note"
+                : "Start writing here — then tap Convert"}
+            </p>
           </div>
         )}
+
         {isConverting && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-[1px]">
             <p className="rounded-lg border bg-background px-4 py-2 text-sm font-medium shadow-sm">
@@ -615,6 +662,28 @@ export function StylusCanvas({
           </div>
         )}
       </div>
+
+      <style>{`
+        .stylus-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 14px;
+          height: 14px;
+          border-radius: 9999px;
+          background: var(--foreground);
+          border: 2px solid var(--background);
+          box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 25%, transparent);
+          cursor: pointer;
+        }
+        .stylus-slider::-moz-range-thumb {
+          width: 14px;
+          height: 14px;
+          border-radius: 9999px;
+          background: var(--foreground);
+          border: 2px solid var(--background);
+          cursor: pointer;
+        }
+      `}</style>
     </div>
   );
 }

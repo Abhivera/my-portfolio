@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Eye, Lock, LogOut, PenLine, Pencil, StickyNote, Trash2 } from "lucide-react";
+import { Eye, Lock, LogOut, Menu, PanelLeftClose } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,7 +78,7 @@ function NotepadPage() {
   }, []);
 
   useEffect(() => {
-    if (viewMode === "write" && window.matchMedia("(max-width: 768px)").matches) {
+    if (viewMode === "compose" && window.matchMedia("(max-width: 768px)").matches) {
       setSidebarOpen(false);
     }
   }, [viewMode]);
@@ -226,10 +226,11 @@ function NotepadPage() {
     setWorkspace((prev) =>
       updateActiveNote(prev, (note) => ({
         ...note,
-        content: note.content.trim() ? `${note.content.trimEnd()}\n\n${text}` : text,
+        content: note.content.trim()
+          ? `${note.content.trimEnd()}\n\n${text}`
+          : text,
       })),
     );
-    setViewMode("edit");
   };
 
   const handleSelectNote = async (id: string) => {
@@ -382,12 +383,19 @@ function NotepadPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="md:hidden"
+            className="shrink-0"
             onClick={() => setSidebarOpen((v) => !v)}
+            aria-label={sidebarOpen ? "Hide notes sidebar" : "Show notes sidebar"}
+            aria-expanded={sidebarOpen}
+            aria-controls="notepad-sidebar"
           >
-            <StickyNote className="h-4 w-4" />
+            {sidebarOpen ? (
+              <PanelLeftClose className="h-4 w-4" />
+            ) : (
+              <Menu className="h-4 w-4" />
+            )}
           </Button>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-sm font-semibold tracking-tight">Notepad</h1>
             <p
               className={`text-xs ${
@@ -403,59 +411,19 @@ function NotepadPage() {
           </div>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <div className="flex items-center rounded-lg border p-0.5">
-            <button
-              type="button"
-              onClick={() => setViewMode("edit")}
-              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                viewMode === "edit"
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              aria-pressed={viewMode === "edit"}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Edit</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("write")}
-              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                viewMode === "write"
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              aria-pressed={viewMode === "write"}
-            >
-              <PenLine className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Write</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("preview")}
-              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                viewMode === "preview"
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              aria-pressed={viewMode === "preview"}
-            >
-              <Eye className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Preview</span>
-            </button>
-          </div>
-          {workspace.notes.length > 1 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:text-destructive"
-              onClick={() => void handleDeleteNote(workspace.activeNoteId)}
-              aria-label="Delete note"
-            >
-              <Trash2 className="h-4 w-4 sm:mr-1.5" />
-              <span className="hidden sm:inline">Delete</span>
-            </Button>
-          )}
+          <Button
+            variant={viewMode === "preview" ? "secondary" : "outline"}
+            size="sm"
+            onClick={() =>
+              setViewMode(viewMode === "preview" ? "compose" : "preview")
+            }
+            aria-pressed={viewMode === "preview"}
+          >
+            <Eye className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">
+              {viewMode === "preview" ? "Back to edit" : "Preview"}
+            </span>
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -470,28 +438,25 @@ function NotepadPage() {
 
       <div className="flex min-h-0 flex-1">
         {sidebarOpen && (
-          <NotepadSidebar
-            notes={workspace.notes}
-            activeNoteId={workspace.activeNoteId}
-            onSelect={(id) => void handleSelectNote(id)}
-            onNewNote={() => void handleNewNote()}
-            onDelete={(id) => void handleDeleteNote(id)}
-            onRename={handleRenameNote}
-          />
+          <div id="notepad-sidebar" className="shrink-0">
+            <NotepadSidebar
+              notes={workspace.notes}
+              activeNoteId={workspace.activeNoteId}
+              onSelect={(id) => {
+                void handleSelectNote(id);
+                if (window.matchMedia("(max-width: 768px)").matches) {
+                  setSidebarOpen(false);
+                }
+              }}
+              onNewNote={() => void handleNewNote()}
+              onDelete={(id) => void handleDeleteNote(id)}
+              onRename={handleRenameNote}
+            />
+          </div>
         )}
 
-        <main
-          className={`flex min-h-0 flex-1 flex-col ${
-            viewMode === "write"
-              ? "overflow-hidden p-3 md:p-4"
-              : "overflow-y-auto p-4 md:p-6"
-          }`}
-        >
-          <div
-            className={`mx-auto flex h-full w-full flex-col gap-3 ${
-              viewMode === "write" ? "max-w-5xl" : "max-w-4xl gap-4"
-            }`}
-          >
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 md:p-6">
+          <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
             {contentLoading ? (
               <p className="text-sm text-muted-foreground">Loading notes…</p>
             ) : viewMode === "preview" ? (
@@ -508,24 +473,6 @@ function NotepadPage() {
                 )}
                 <MarkdownPreview content={content} className="flex-1" />
               </>
-            ) : viewMode === "write" ? (
-              <>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Untitled"
-                  className="w-full shrink-0 bg-transparent text-lg font-semibold tracking-tight outline-none placeholder:text-muted-foreground/40 md:text-xl"
-                />
-                <StylusCanvas
-                  inkData={inkData}
-                  handwritingMode={handwritingMode}
-                  onHandwritingModeChange={setHandwritingMode}
-                  onInkChange={setInkData}
-                  onTextRecognized={handleTextRecognized}
-                  className="min-h-0 flex-1"
-                />
-              </>
             ) : (
               <>
                 <input
@@ -533,13 +480,21 @@ function NotepadPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Untitled"
-                  className="w-full bg-transparent text-2xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/40"
+                  className="w-full bg-transparent text-xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/40 md:text-2xl"
+                />
+                <StylusCanvas
+                  inkData={inkData}
+                  handwritingMode={handwritingMode}
+                  onHandwritingModeChange={setHandwritingMode}
+                  onInkChange={setInkData}
+                  onTextRecognized={handleTextRecognized}
+                  className="flex-none"
                 />
                 <Textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Start writing… Markdown supported."
-                  className="min-h-[calc(100vh-12rem)] flex-1 resize-none font-mono text-sm leading-relaxed"
+                  placeholder="Type here… Markdown supported."
+                  className="min-h-[200px] resize-y font-mono text-sm leading-relaxed"
                 />
               </>
             )}

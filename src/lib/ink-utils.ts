@@ -59,6 +59,7 @@ export function drawStroke(
   height: number,
   color: string,
   pressureSensitivity = 1,
+  fixedLineWidth?: number,
 ) {
   const points = stroke.points;
   if (points.length === 0) return;
@@ -79,7 +80,9 @@ export function drawStroke(
 
   if (points.length === 1) {
     const point = points[0];
-    const radius = strokeWidthPx(stroke, point.p, canvasMinDim, pressureSensitivity) / 2;
+    const radius =
+      (fixedLineWidth ??
+        strokeWidthPx(stroke, point.p, canvasMinDim, pressureSensitivity)) / 2;
     ctx.fillStyle = stroke.eraser ? "rgba(0,0,0,1)" : color;
     ctx.beginPath();
     ctx.arc(point.x * width, point.y * height, Math.max(radius, 0.5), 0, Math.PI * 2);
@@ -92,7 +95,9 @@ export function drawStroke(
     const previous = points[i - 1];
     const current = points[i];
     const pressure = (previous.p + current.p) / 2;
-    ctx.lineWidth = strokeWidthPx(stroke, pressure, canvasMinDim, pressureSensitivity);
+    ctx.lineWidth =
+      fixedLineWidth ??
+      strokeWidthPx(stroke, pressure, canvasMinDim, pressureSensitivity);
 
     ctx.beginPath();
     ctx.moveTo(previous.x * width, previous.y * height);
@@ -110,17 +115,31 @@ export function renderInkData(
   height: number,
   color: string,
   pressureSensitivity = 1,
+  options?: { clear?: boolean; fixedLineWidth?: number },
 ) {
-  ctx.clearRect(0, 0, width, height);
+  if (options?.clear !== false) {
+    ctx.clearRect(0, 0, width, height);
+  }
   for (const stroke of data.strokes) {
-    drawStroke(ctx, stroke, width, height, color, pressureSensitivity);
+    drawStroke(
+      ctx,
+      stroke,
+      width,
+      height,
+      color,
+      pressureSensitivity,
+      options?.fixedLineWidth,
+    );
   }
 }
 
-const OCR_EXPORT_WIDTH = 1200;
-const OCR_EXPORT_HEIGHT = 1600;
-const OCR_CROP_PADDING_PX = 24;
-const OCR_SCALE = 2;
+const OCR_EXPORT_WIDTH = 1000;
+const OCR_EXPORT_HEIGHT = 1000;
+const OCR_CROP_PADDING_PX = 40;
+const OCR_MIN_OUTPUT = 480;
+const OCR_MAX_OUTPUT = 1600;
+/** Fixed stroke width in OCR export — thick enough for Tesseract, not blob-like. */
+const OCR_LINE_WIDTH = 6;
 
 type PixelBounds = {
   minX: number;
@@ -129,10 +148,7 @@ type PixelBounds = {
   maxY: number;
 };
 
-function findDarkPixelBounds(
-  imageData: ImageData,
-  threshold = 240,
-): PixelBounds | null {
+function findInkBounds(imageData: ImageData, threshold = 200): PixelBounds | null {
   const { data, width, height } = imageData;
   let minX = width;
   let minY = height;
@@ -142,6 +158,8 @@ function findDarkPixelBounds(
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const index = (y * width + x) * 4;
+      const alpha = data[index + 3];
+      if (alpha < 16) continue;
       const luminance =
         data[index] * 0.299 + data[index + 1] * 0.587 + data[index + 2] * 0.114;
       if (luminance < threshold) {
@@ -157,7 +175,21 @@ function findDarkPixelBounds(
   return { minX, minY, maxX, maxY };
 }
 
-/** Renders ink strokes to a cropped, high-contrast PNG data URL for OCR. */
+function binarizeInPlace(ctx: CanvasRenderingContext2D, width: number, height: number) {
+  const image = ctx.getImageData(0, 0, width, height);
+  const { data } = image;
+  for (let i = 0; i < data.length; i += 4) {
+    const luminance = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    const value = luminance < 180 ? 0 : 255;
+    data[i] = value;
+    data[i + 1] = value;
+    data[i + 2] = value;
+    data[i + 3] = 255;
+  }
+  ctx.putImageData(image, 0, 0);
+}
+
+/** Renders ink to a cropped, white-background, high-contrast PNG for OCR. */
 export function exportInkImageForOcr(data: InkData): string | null {
   if (data.strokes.length === 0) return null;
 
@@ -165,14 +197,18 @@ export function exportInkImageForOcr(data: InkData): string | null {
   canvas.width = OCR_EXPORT_WIDTH;
   canvas.height = OCR_EXPORT_HEIGHT;
 
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) return null;
 
+  // White background first — do NOT clear after this.
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, OCR_EXPORT_WIDTH, OCR_EXPORT_HEIGHT);
-  renderInkData(ctx, data, OCR_EXPORT_WIDTH, OCR_EXPORT_HEIGHT, "#000000");
+  renderInkData(ctx, data, OCR_EXPORT_WIDTH, OCR_EXPORT_HEIGHT, "#000000", 1, {
+    clear: false,
+    fixedLineWidth: OCR_LINE_WIDTH,
+  });
 
-  const bounds = findDarkPixelBounds(
+  const bounds = findInkBounds(
     ctx.getImageData(0, 0, OCR_EXPORT_WIDTH, OCR_EXPORT_HEIGHT),
   );
   if (!bounds) return null;
@@ -188,16 +224,25 @@ export function exportInkImageForOcr(data: InkData): string | null {
     bounds.maxY - bounds.minY + OCR_CROP_PADDING_PX * 2,
   );
 
-  const output = document.createElement("canvas");
-  output.width = Math.max(1, Math.floor(cropW * OCR_SCALE));
-  output.height = Math.max(1, Math.floor(cropH * OCR_SCALE));
+  if (cropW < 4 || cropH < 4) return null;
 
-  const outputCtx = output.getContext("2d");
+  const longest = Math.max(cropW, cropH);
+  const scale = Math.min(
+    OCR_MAX_OUTPUT / longest,
+    Math.max(OCR_MIN_OUTPUT / longest, 2),
+  );
+
+  const output = document.createElement("canvas");
+  output.width = Math.max(1, Math.round(cropW * scale));
+  output.height = Math.max(1, Math.round(cropH * scale));
+
+  const outputCtx = output.getContext("2d", { willReadFrequently: true });
   if (!outputCtx) return null;
 
   outputCtx.fillStyle = "#ffffff";
   outputCtx.fillRect(0, 0, output.width, output.height);
-  outputCtx.imageSmoothingEnabled = false;
+  outputCtx.imageSmoothingEnabled = true;
+  outputCtx.imageSmoothingQuality = "high";
   outputCtx.drawImage(
     canvas,
     cropX,
@@ -209,6 +254,8 @@ export function exportInkImageForOcr(data: InkData): string | null {
     output.width,
     output.height,
   );
+
+  binarizeInPlace(outputCtx, output.width, output.height);
 
   return output.toDataURL("image/png");
 }
