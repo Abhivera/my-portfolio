@@ -1,26 +1,27 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Eraser,
-  Hand,
+  Lock,
+  Minus,
   Pen,
+  Plus,
+  Redo2,
   RotateCcw,
-  ScanText,
   Trash2,
+  Unlock,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { InkData, InkPoint, InkStroke } from "../../../lib/notepad/types";
 import {
+  DEFAULT_INK_COLOR,
   DEFAULT_STROKE_WIDTH,
-  MAX_STROKE_WIDTH,
-  MIN_STROKE_WIDTH,
+  INK_STROKE_COLORS,
+  STROKE_WIDTH_PRESETS,
   drawStroke,
-  exportInkImageForOcr,
   parseInkData,
   renderInkData,
   serializeInkData,
 } from "@/lib/ink-utils";
-import { recognizeHandwriting } from "@/lib/ink-ocr";
 import {
   DEFAULT_PRESSURE_SENSITIVITY,
   MAX_PRESSURE_SENSITIVITY,
@@ -31,39 +32,88 @@ import {
   isPenEraserButton,
   normalizePointerPoint,
 } from "@/lib/stylus-utils";
-import type { HandwritingMode } from "@/lib/handwriting-mode";
-import { toast } from "sonner";
 
 type StylusCanvasProps = {
   inkData?: string;
-  handwritingMode?: HandwritingMode;
-  onHandwritingModeChange?: (mode: HandwritingMode) => void;
   onInkChange?: (inkData: string | undefined) => void;
-  onTextRecognized?: (text: string) => void;
   className?: string;
   readOnly?: boolean;
+  fillHeight?: boolean;
 };
 
 type DrawTool = "pen" | "eraser";
 
 const POINT_EPSILON = 0.0008;
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 2;
+const ZOOM_STEP = 0.1;
+
+/** Excalidraw-like active accent */
+const ACTIVE_BG = "bg-[#e7e5ff]";
+const ACTIVE_TEXT = "text-[#5b57d1]";
 
 function isNearDuplicate(a: InkPoint, b: InkPoint): boolean {
   return Math.abs(a.x - b.x) < POINT_EPSILON && Math.abs(a.y - b.y) < POINT_EPSILON;
 }
 
+function ToolButton({
+  active,
+  onClick,
+  label,
+  children,
+  title,
+}: {
+  active?: boolean;
+  onClick: () => void;
+  label: string;
+  children: ReactNode;
+  title?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title ?? label}
+      aria-label={label}
+      aria-pressed={active}
+      className={cn(
+        "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+        active
+          ? cn(ACTIVE_BG, ACTIVE_TEXT)
+          : "text-[#1b1b1f]/70 hover:bg-black/[0.04] hover:text-[#1b1b1f]",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function PanelSection({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] font-medium text-[#1b1b1f]/55">{label}</p>
+      {children}
+    </div>
+  );
+}
+
 export function StylusCanvas({
   inkData,
-  handwritingMode = "keep",
-  onHandwritingModeChange,
   onInkChange,
-  onTextRecognized,
   className,
   readOnly = false,
+  fillHeight = false,
 }: StylusCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inkRef = useRef<InkData>(parseInkData(inkData));
+  const redoStackRef = useRef<InkStroke[][]>([]);
   const activeStrokeRef = useRef<InkStroke | null>(null);
   const activePointerRef = useRef<number | null>(null);
   const penRecentlyUsedRef = useRef(false);
@@ -71,21 +121,26 @@ export function StylusCanvas({
   const rawUpdateSupportedRef = useRef(false);
   const stylusOnlyRef = useRef(true);
   const strokeWidthRef = useRef(DEFAULT_STROKE_WIDTH);
+  const strokeColorRef = useRef(DEFAULT_INK_COLOR);
+  const opacityRef = useRef(1);
   const toolRef = useRef<DrawTool>("pen");
   const pressureSensitivityRef = useRef(DEFAULT_PRESSURE_SENSITIVITY);
   const paintRafRef = useRef<number | null>(null);
 
   const [tool, setTool] = useState<DrawTool>("pen");
   const [strokeWidth, setStrokeWidth] = useState(DEFAULT_STROKE_WIDTH);
+  const [strokeColor, setStrokeColor] = useState(DEFAULT_INK_COLOR);
+  const [opacity, setOpacity] = useState(100);
   const [stylusOnly, setStylusOnly] = useState(true);
   const [pressureSensitivity, setPressureSensitivity] = useState(
     DEFAULT_PRESSURE_SENSITIVITY,
   );
   const [hasInk, setHasInk] = useState(inkRef.current.strokes.length > 0);
-  const [ocrProgress, setOcrProgress] = useState<number | null>(null);
-  const [isConverting, setIsConverting] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const [penStatus, setPenStatus] = useState<string | null>(null);
   const [penSeen, setPenSeen] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [showProps, setShowProps] = useState(true);
 
   useEffect(() => {
     stylusOnlyRef.current = stylusOnly;
@@ -94,6 +149,14 @@ export function StylusCanvas({
   useEffect(() => {
     strokeWidthRef.current = strokeWidth;
   }, [strokeWidth]);
+
+  useEffect(() => {
+    strokeColorRef.current = strokeColor;
+  }, [strokeColor]);
+
+  useEffect(() => {
+    opacityRef.current = opacity / 100;
+  }, [opacity]);
 
   useEffect(() => {
     toolRef.current = tool;
@@ -114,23 +177,24 @@ export function StylusCanvas({
     const container = containerRef.current;
     if (!canvas || !container) return;
 
-    const rect = container.getBoundingClientRect();
+    // Use layout size (not getBoundingClientRect) so CSS zoom scale doesn't resize the buffer.
+    const cssW = Math.max(1, container.clientWidth);
+    const cssH = Math.max(1, container.clientHeight);
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
-    const width = Math.max(1, Math.floor(rect.width * dpr));
-    const height = Math.max(1, Math.floor(rect.height * dpr));
+    const width = Math.max(1, Math.floor(cssW * dpr));
+    const height = Math.max(1, Math.floor(cssH * dpr));
 
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width;
       canvas.height = height;
-      canvas.style.width = `${rect.width}px`;
-      canvas.style.height = `${rect.height}px`;
+      canvas.style.width = `${cssW}px`;
+      canvas.style.height = `${cssH}px`;
     }
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const color =
-      getComputedStyle(container).getPropertyValue("--foreground").trim() || "#111";
+    const color = DEFAULT_INK_COLOR;
     const sensitivity = pressureSensitivityRef.current;
     renderInkData(ctx, inkRef.current, width, height, color, sensitivity);
 
@@ -155,6 +219,8 @@ export function StylusCanvas({
   useEffect(() => {
     if (activePointerRef.current !== null) return;
     inkRef.current = parseInkData(inkData);
+    redoStackRef.current = [];
+    setCanRedo(false);
     setHasInk(inkRef.current.strokes.length > 0);
     paint();
   }, [inkData, paint]);
@@ -233,6 +299,8 @@ export function StylusCanvas({
         points: [point],
         width: strokeWidthRef.current,
         eraser: useEraser,
+        color: useEraser ? undefined : strokeColorRef.current,
+        opacity: useEraser ? undefined : opacityRef.current,
       };
       setPenStatus(formatPenStatus(event.pointerType, event.pressure));
       schedulePaint();
@@ -247,6 +315,8 @@ export function StylusCanvas({
         ...inkRef.current,
         strokes: [...inkRef.current.strokes, stroke],
       };
+      redoStackRef.current = [];
+      setCanRedo(false);
       commitInk();
     }
     activeStrokeRef.current = null;
@@ -255,7 +325,6 @@ export function StylusCanvas({
     schedulePaint();
   }, [commitInk, schedulePaint]);
 
-  // Native pointer listeners for reliable stylus on Android Chrome.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || readOnly) return;
@@ -281,7 +350,6 @@ export function StylusCanvas({
 
     const onMove = (event: PointerEvent) => {
       if (activePointerRef.current !== event.pointerId) return;
-      // When raw updates are available, pointermove is lower-frequency — skip to avoid dupes.
       if (rawUpdateSupportedRef.current && event.pointerType === "pen") return;
 
       if (event.pointerType === "pen") markPenUsed();
@@ -333,9 +401,27 @@ export function StylusCanvas({
 
   const handleUndo = () => {
     if (readOnly || inkRef.current.strokes.length === 0) return;
+    const strokes = inkRef.current.strokes;
+    const removed = strokes[strokes.length - 1];
+    redoStackRef.current = [...redoStackRef.current, [removed]];
+    setCanRedo(true);
     inkRef.current = {
       ...inkRef.current,
-      strokes: inkRef.current.strokes.slice(0, -1),
+      strokes: strokes.slice(0, -1),
+    };
+    commitInk();
+    schedulePaint();
+  };
+
+  const handleRedo = () => {
+    if (readOnly || redoStackRef.current.length === 0) return;
+    const stack = redoStackRef.current;
+    const next = stack[stack.length - 1];
+    redoStackRef.current = stack.slice(0, -1);
+    setCanRedo(redoStackRef.current.length > 0);
+    inkRef.current = {
+      ...inkRef.current,
+      strokes: [...inkRef.current.strokes, ...next],
     };
     commitInk();
     schedulePaint();
@@ -343,188 +429,169 @@ export function StylusCanvas({
 
   const handleClear = () => {
     if (readOnly || inkRef.current.strokes.length === 0) return;
-    if (!window.confirm("Clear all handwriting on this note?")) return;
+    if (!window.confirm("Clear all ink on this canvas?")) return;
+    redoStackRef.current = [];
+    setCanRedo(false);
     inkRef.current = { version: 1, strokes: [] };
     commitInk();
     schedulePaint();
   };
 
-  const snapshotCanvasForOcr = (): string | null => {
-    const source = canvasRef.current;
-    if (!source || source.width < 2 || source.height < 2) return null;
-
-    const output = document.createElement("canvas");
-    output.width = source.width;
-    output.height = source.height;
-    const ctx = output.getContext("2d");
-    if (!ctx) return null;
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, output.width, output.height);
-    ctx.drawImage(source, 0, 0);
-    return output.toDataURL("image/png");
+  const setZoomClamped = (next: number) => {
+    setZoom(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(next * 100) / 100)));
   };
 
-  const handleConvertToText = async () => {
-    if (readOnly || isConverting || !onTextRecognized) return;
-
-    if (handwritingMode !== "toText") {
-      onHandwritingModeChange?.("toText");
-    }
-
-    if (inkRef.current.strokes.length === 0) {
-      toast.error("Write something first");
-      return;
-    }
-
-    const imageDataUrl =
-      exportInkImageForOcr(inkRef.current) ?? snapshotCanvasForOcr();
-    if (!imageDataUrl) {
-      toast.error("Could not prepare handwriting for recognition");
-      return;
-    }
-
-    setIsConverting(true);
-    setOcrProgress(0);
-    try {
-      const text = await recognizeHandwriting(imageDataUrl, ({ progress }) => {
-        setOcrProgress(Math.round(progress * 100));
-      });
-
-      if (!text) {
-        toast.error(
-          "Couldn’t read that. Write letters/words larger, then Convert again.",
-        );
-        return;
-      }
-
-      onTextRecognized(text);
-      // Clear ink after successful conversion so the next phrase is clean.
-      inkRef.current = { version: 1, strokes: [] };
-      commitInk();
-      schedulePaint();
-      toast.success(
-        `Converted: “${text.length > 40 ? `${text.slice(0, 40)}…` : text}”`,
-      );
-    } catch (error) {
-      console.error("[ocr]", error);
-      toast.error("Text recognition failed. Check your connection and try again.");
-    } finally {
-      setIsConverting(false);
-      setOcrProgress(null);
-    }
-  };
+  const floatingChrome = !readOnly;
 
   return (
-    <div className={cn("flex min-h-0 flex-1 flex-col gap-2", className)}>
-      {!readOnly && (
-        <div className="flex shrink-0 flex-col gap-2">
-          {onHandwritingModeChange && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => onHandwritingModeChange("keep")}
-                className={cn(
-                  "rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
-                  handwritingMode === "keep"
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                )}
-                aria-pressed={handwritingMode === "keep"}
-              >
-                Keep ink
-              </button>
-              <button
-                type="button"
-                onClick={() => onHandwritingModeChange("toText")}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
-                  handwritingMode === "toText"
-                    ? "border-foreground/20 bg-background text-foreground shadow-sm"
-                    : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
-                )}
-                aria-pressed={handwritingMode === "toText"}
-              >
-                <ScanText className="h-3.5 w-3.5" />
-                To text
-              </button>
-              {onTextRecognized && handwritingMode === "toText" && (
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-8"
-                  onClick={() => void handleConvertToText()}
-                  disabled={!hasInk || isConverting}
-                >
-                  {isConverting
-                    ? ocrProgress !== null
-                      ? `${ocrProgress}%`
-                      : "…"
-                    : "Convert"}
-                </Button>
-              )}
-            </div>
+    <div
+      className={cn(
+        "relative min-h-0 overflow-hidden bg-white",
+        fillHeight ? "flex-1" : "min-h-[32vh] md:min-h-[36vh]",
+        className,
+      )}
+    >
+      {/* Drawing surface */}
+      <div ref={containerRef} className="absolute inset-0 overflow-hidden bg-white">
+        <canvas
+          ref={canvasRef}
+          className={cn(
+            "absolute inset-0 touch-none select-none",
+            readOnly ? "pointer-events-none" : "cursor-crosshair",
           )}
+          style={{
+            touchAction: "none",
+            transform: `scale(${zoom})`,
+            transformOrigin: "center center",
+          }}
+        />
+      </div>
 
-          {/* Tool clusters with dividers */}
-          <div className="flex flex-wrap items-center gap-y-2 rounded-lg border bg-muted/20 px-1.5 py-1">
-            {/* Draw tools */}
-            <div className="flex items-center gap-0.5 px-1">
-              <button
-                type="button"
-                onClick={() => setTool("pen")}
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-md transition-colors",
-                  tool === "pen"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
+      {!readOnly && !hasInk && (
+        <div className="pointer-events-none absolute inset-x-0 top-[22%] flex justify-center">
+          <p className="text-sm text-[#1b1b1f]/35">
+            Draw with pen or finger — release when finished
+          </p>
+        </div>
+      )}
+
+      {floatingChrome && (
+        <>
+          {/* Top-center tool bar */}
+          <div className="pointer-events-none absolute inset-x-0 top-3 z-30 flex justify-center px-3">
+            <div className="pointer-events-auto flex items-center gap-0.5 rounded-xl border border-black/[0.08] bg-white px-1.5 py-1 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.04)]">
+              <ToolButton
+                active={stylusOnly}
+                onClick={() => setStylusOnly((v) => !v)}
+                label={stylusOnly ? "Stylus only (locked)" : "Finger allowed"}
+                title={
+                  stylusOnly
+                    ? "Stylus only — unlock to allow finger"
+                    : "Finger OK — lock for stylus only"
+                }
+              >
+                {stylusOnly ? (
+                  <Lock className="h-4 w-4" />
+                ) : (
+                  <Unlock className="h-4 w-4" />
                 )}
-                aria-label="Pen"
-                aria-pressed={tool === "pen"}
+              </ToolButton>
+
+              <div className="mx-0.5 h-6 w-px bg-black/[0.08]" aria-hidden />
+
+              <ToolButton
+                active={tool === "pen"}
+                onClick={() => {
+                  setTool("pen");
+                  setShowProps(true);
+                }}
+                label="Pen"
               >
                 <Pen className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setTool("eraser")}
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-md transition-colors",
-                  tool === "eraser"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                aria-label="Eraser"
-                aria-pressed={tool === "eraser"}
+              </ToolButton>
+
+              <ToolButton
+                active={tool === "eraser"}
+                onClick={() => {
+                  setTool("eraser");
+                  setShowProps(true);
+                }}
+                label="Eraser"
               >
                 <Eraser className="h-4 w-4" />
-              </button>
+              </ToolButton>
+
+              <div className="mx-0.5 h-6 w-px bg-black/[0.08]" aria-hidden />
+
+              <ToolButton
+                onClick={handleClear}
+                label="Clear canvas"
+                active={false}
+              >
+                <Trash2 className="h-4 w-4" />
+              </ToolButton>
             </div>
+          </div>
 
-            <div className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden />
+          {/* Left properties panel */}
+          {showProps && tool === "pen" && (
+            <div className="absolute left-3 top-16 z-30 w-[200px] rounded-xl border border-black/[0.08] bg-white p-3 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.04)]">
+              <PanelSection label="Stroke">
+                <div className="flex flex-wrap gap-1.5">
+                  {INK_STROKE_COLORS.map((color) => {
+                    const selected = strokeColor === color;
+                    return (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setStrokeColor(color)}
+                        aria-label={`Stroke color ${color}`}
+                        aria-pressed={selected}
+                        className={cn(
+                          "h-6 w-6 rounded-md border border-black/10 transition-shadow",
+                          selected && "ring-2 ring-[#5b57d1] ring-offset-1",
+                        )}
+                        style={{ backgroundColor: color }}
+                      />
+                    );
+                  })}
+                </div>
+              </PanelSection>
 
-            {/* Adjustments — filled-track sliders */}
-            <div className="flex flex-wrap items-center gap-3 px-2">
-              <label className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                Size
-                <input
-                  type="range"
-                  min={MIN_STROKE_WIDTH}
-                  max={MAX_STROKE_WIDTH}
-                  step={0.5}
-                  value={strokeWidth}
-                  onChange={(e) => setStrokeWidth(Number(e.target.value))}
-                  className="stylus-slider h-2 w-28 cursor-pointer appearance-none rounded-full bg-muted sm:w-32"
-                  style={{
-                    background: `linear-gradient(to right, var(--foreground) ${
-                      ((strokeWidth - MIN_STROKE_WIDTH) /
-                        (MAX_STROKE_WIDTH - MIN_STROKE_WIDTH)) *
-                      100
-                    }%, var(--muted) 0%)`,
-                  }}
-                />
-              </label>
-              <label className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                Press
+              <div className="my-3 h-px bg-black/[0.06]" />
+
+              <PanelSection label="Stroke width">
+                <div className="flex gap-1.5">
+                  {STROKE_WIDTH_PRESETS.map((preset, index) => {
+                    const selected = strokeWidth === preset;
+                    const lineH = index === 0 ? 1.5 : index === 1 ? 2.5 : 4;
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setStrokeWidth(preset)}
+                        aria-label={`Stroke width ${preset}`}
+                        aria-pressed={selected}
+                        className={cn(
+                          "flex h-8 flex-1 items-center justify-center rounded-lg border transition-colors",
+                          selected
+                            ? cn("border-transparent", ACTIVE_BG)
+                            : "border-black/[0.08] hover:bg-black/[0.03]",
+                        )}
+                      >
+                        <span
+                          className="block w-5 rounded-full bg-[#1b1b1f]"
+                          style={{ height: lineH }}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              </PanelSection>
+
+              <div className="my-3 h-px bg-black/[0.06]" />
+
+              <PanelSection label="Pressure">
                 <input
                   type="range"
                   min={MIN_PRESSURE_SENSITIVITY}
@@ -532,155 +599,170 @@ export function StylusCanvas({
                   step={0.1}
                   value={pressureSensitivity}
                   onChange={(e) => setPressureSensitivity(Number(e.target.value))}
-                  className="stylus-slider h-2 w-28 cursor-pointer appearance-none rounded-full bg-muted sm:w-32"
+                  className="excal-slider h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#e8e8ec]"
                   style={{
-                    background: `linear-gradient(to right, var(--foreground) ${
+                    background: `linear-gradient(to right, #5b57d1 ${
                       ((pressureSensitivity - MIN_PRESSURE_SENSITIVITY) /
                         (MAX_PRESSURE_SENSITIVITY - MIN_PRESSURE_SENSITIVITY)) *
                       100
-                    }%, var(--muted) 0%)`,
+                    }%, #e8e8ec 0%)`,
                   }}
                 />
-              </label>
-            </div>
+              </PanelSection>
 
-            <div className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden />
+              <div className="my-3 h-px bg-black/[0.06]" />
 
-            {/* Input mode + help beside it */}
-            <div className="flex flex-col gap-0.5 px-1">
-              <button
-                type="button"
-                onClick={() => setStylusOnly((value) => !value)}
-                className={cn(
-                  "flex h-9 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors",
-                  stylusOnly
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                aria-pressed={stylusOnly}
-                title={
-                  stylusOnly
-                    ? "Only stylus draws (palm rejection)"
-                    : "Stylus and finger can draw"
-                }
-              >
-                {stylusOnly ? (
-                  <Pen className="h-3.5 w-3.5" />
-                ) : (
-                  <Hand className="h-3.5 w-3.5" />
-                )}
-                {stylusOnly ? "Stylus only" : "Finger OK"}
-              </button>
+              <PanelSection label="Opacity">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={10}
+                    max={100}
+                    step={1}
+                    value={opacity}
+                    onChange={(e) => setOpacity(Number(e.target.value))}
+                    className="excal-slider h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#e8e8ec]"
+                    style={{
+                      background: `linear-gradient(to right, #5b57d1 ${opacity}%, #e8e8ec 0%)`,
+                    }}
+                  />
+                  <span className="w-8 shrink-0 text-right text-[11px] tabular-nums text-[#1b1b1f]/55">
+                    {opacity}
+                  </span>
+                </div>
+              </PanelSection>
+
               {stylusOnly && !penSeen && (
                 <button
                   type="button"
-                  className="px-1 text-left text-[10px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                  className="mt-3 text-left text-[11px] text-[#5b57d1] underline-offset-2 hover:underline"
                   onClick={() => setStylusOnly(false)}
                 >
-                  Not working? Allow finger
+                  Not drawing? Allow finger
                 </button>
               )}
             </div>
+          )}
 
-            <div className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden />
+          {/* Eraser tip panel */}
+          {showProps && tool === "eraser" && (
+            <div className="absolute left-3 top-16 z-30 w-[200px] rounded-xl border border-black/[0.08] bg-white p-3 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.04)]">
+              <PanelSection label="Eraser size">
+                <div className="flex gap-1.5">
+                  {STROKE_WIDTH_PRESETS.map((preset, index) => {
+                    const selected = strokeWidth === preset;
+                    const lineH = index === 0 ? 1.5 : index === 1 ? 2.5 : 4;
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setStrokeWidth(preset)}
+                        aria-label={`Eraser size ${preset}`}
+                        aria-pressed={selected}
+                        className={cn(
+                          "flex h-8 flex-1 items-center justify-center rounded-lg border transition-colors",
+                          selected
+                            ? cn("border-transparent", ACTIVE_BG)
+                            : "border-black/[0.08] hover:bg-black/[0.03]",
+                        )}
+                      >
+                        <span
+                          className="block w-5 rounded-full bg-[#1b1b1f]"
+                          style={{ height: lineH }}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              </PanelSection>
+              <p className="mt-3 text-[11px] leading-relaxed text-[#1b1b1f]/45">
+                Drag over ink to erase. Stylus eraser button also works.
+              </p>
+            </div>
+          )}
 
-            {/* History — left of canvas edge, clear needs confirm */}
-            <div className="flex items-center gap-0.5 px-1">
+          {/* Bottom-left zoom + undo/redo */}
+          <div className="absolute bottom-3 left-3 z-30 flex items-center gap-1.5">
+            <div className="flex items-center rounded-xl border border-black/[0.08] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.08)]">
+              <button
+                type="button"
+                onClick={() => setZoomClamped(zoom - ZOOM_STEP)}
+                disabled={zoom <= MIN_ZOOM}
+                className="flex h-9 w-9 items-center justify-center rounded-l-xl text-[#1b1b1f]/70 transition-colors hover:bg-black/[0.04] disabled:opacity-35"
+                aria-label="Zoom out"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoom(1)}
+                className="min-w-[3.25rem] px-1 text-center text-xs font-medium tabular-nums text-[#1b1b1f]/80"
+                title="Reset zoom"
+              >
+                {Math.round(zoom * 100)}%
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoomClamped(zoom + ZOOM_STEP)}
+                disabled={zoom >= MAX_ZOOM}
+                className="flex h-9 w-9 items-center justify-center rounded-r-xl text-[#1b1b1f]/70 transition-colors hover:bg-black/[0.04] disabled:opacity-35"
+                aria-label="Zoom in"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center rounded-xl border border-black/[0.08] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.08)]">
               <button
                 type="button"
                 onClick={handleUndo}
                 disabled={!hasInk}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+                className="flex h-9 w-9 items-center justify-center rounded-l-xl text-[#1b1b1f]/70 transition-colors hover:bg-black/[0.04] disabled:opacity-35"
                 aria-label="Undo"
               >
                 <RotateCcw className="h-4 w-4" />
               </button>
               <button
                 type="button"
-                onClick={handleClear}
-                disabled={!hasInk}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive disabled:opacity-40"
-                aria-label="Clear all ink"
-                title="Clear all ink"
+                onClick={handleRedo}
+                disabled={!canRedo}
+                className="flex h-9 w-9 items-center justify-center rounded-r-xl text-[#1b1b1f]/70 transition-colors hover:bg-black/[0.04] disabled:opacity-35"
+                aria-label="Redo"
               >
-                <Trash2 className="h-4 w-4" />
+                <Redo2 className="h-4 w-4" />
               </button>
             </div>
-
-            {penStatus && (
-              <p
-                className="ml-auto hidden px-2 text-[11px] text-muted-foreground md:block"
-                aria-live="polite"
-              >
-                {penStatus}
-              </p>
-            )}
           </div>
-        </div>
+
+          {penStatus && (
+            <p
+              className="pointer-events-none absolute bottom-3 right-3 z-20 rounded-md bg-white/80 px-2 py-1 text-[11px] text-[#1b1b1f]/45 backdrop-blur-sm"
+              aria-live="polite"
+            >
+              {penStatus}
+            </p>
+          )}
+        </>
       )}
 
-      <div
-        ref={containerRef}
-        className={cn(
-          "relative overflow-hidden rounded-xl border bg-card",
-          "bg-[radial-gradient(circle_at_1px_1px,color-mix(in_oklab,var(--foreground)_8%,transparent)_1px,transparent_0)] [background-size:18px_18px]",
-          readOnly ? "min-h-[200px] flex-none" : "min-h-[32vh] md:min-h-[36vh]",
-        )}
-      >
-        {/* Top margin guide */}
-        {!readOnly && (
-          <div
-            className="pointer-events-none absolute inset-x-4 top-10 border-t border-dashed border-foreground/10"
-            aria-hidden
-          />
-        )}
-
-        <canvas
-          ref={canvasRef}
-          className={cn(
-            "absolute inset-0 touch-none select-none",
-            readOnly ? "pointer-events-none" : "cursor-crosshair",
-          )}
-          style={{ touchAction: "none" }}
-        />
-
-        {!readOnly && !hasInk && (
-          <div className="pointer-events-none absolute inset-x-0 top-12 flex justify-start px-6">
-            <p className="text-sm text-muted-foreground/50">
-              {handwritingMode === "keep"
-                ? "Start writing here — ink stays on this note"
-                : "Start writing here — then tap Convert"}
-            </p>
-          </div>
-        )}
-
-        {isConverting && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-[1px]">
-            <p className="rounded-lg border bg-background px-4 py-2 text-sm font-medium shadow-sm">
-              Converting{ocrProgress !== null ? ` ${ocrProgress}%` : "…"}
-            </p>
-          </div>
-        )}
-      </div>
-
       <style>{`
-        .stylus-slider::-webkit-slider-thumb {
+        .excal-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
           width: 14px;
           height: 14px;
           border-radius: 9999px;
-          background: var(--foreground);
-          border: 2px solid var(--background);
-          box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 25%, transparent);
+          background: #fff;
+          border: 2px solid #5b57d1;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.12);
           cursor: pointer;
         }
-        .stylus-slider::-moz-range-thumb {
+        .excal-slider::-moz-range-thumb {
           width: 14px;
           height: 14px;
           border-radius: 9999px;
-          background: var(--foreground);
-          border: 2px solid var(--background);
+          background: #fff;
+          border: 2px solid #5b57d1;
           cursor: pointer;
         }
       `}</style>

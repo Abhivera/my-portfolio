@@ -17,23 +17,22 @@ import {
   verifyNotepadPassword,
 } from "@/lib/notepad-client";
 import {
+  createNotepadCollection,
   createNotepadNote,
   defaultNotepadWorkspace,
   getActiveNote,
+  getWorkspaceCollections,
+  normalizeNoteType,
   updateActiveNote,
 } from "@/lib/notepad-utils";
-import {
-  getInitialHandwritingMode,
-  persistHandwritingMode,
-  type HandwritingMode,
-} from "@/lib/handwriting-mode";
-import type { NotepadWorkspaceData } from "../../lib/notepad/types";
+import type { NoteType, NotepadWorkspaceData } from "../../lib/notepad/types";
 import {
   getInitialNotepadViewMode,
   persistNotepadViewMode,
   type NotepadViewMode,
 } from "@/lib/notepad-view-mode";
 import { Toaster } from "@/components/ui/sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/notepad")({
   component: NotepadPage,
@@ -68,15 +67,6 @@ function NotepadPage() {
     persistNotepadViewMode(mode);
   }, []);
 
-  const [handwritingMode, setHandwritingModeState] = useState<HandwritingMode>(
-    getInitialHandwritingMode,
-  );
-
-  const setHandwritingMode = useCallback((mode: HandwritingMode) => {
-    setHandwritingModeState(mode);
-    persistHandwritingMode(mode);
-  }, []);
-
   useEffect(() => {
     if (viewMode === "compose" && window.matchMedia("(max-width: 768px)").matches) {
       setSidebarOpen(false);
@@ -90,6 +80,7 @@ function NotepadPage() {
   const title = activeNote?.title ?? "Untitled";
   const content = activeNote?.content ?? "";
   const inkData = activeNote?.inkData;
+  const noteType = activeNote ? normalizeNoteType(activeNote) : "canvas";
 
   useEffect(() => {
     getNotepadAuthStatus()
@@ -105,6 +96,7 @@ function NotepadPage() {
       const data = await getNotepadWorkspace();
       const loaded: NotepadWorkspaceData = {
         notes: data.notes.length > 0 ? data.notes : defaultNotepadWorkspace().notes,
+        collections: data.collections ?? [],
         activeNoteId: data.activeNoteId,
       };
       if (!loaded.notes.some((n) => n.id === loaded.activeNoteId)) {
@@ -222,17 +214,6 @@ function NotepadPage() {
     );
   };
 
-  const handleTextRecognized = (text: string) => {
-    setWorkspace((prev) =>
-      updateActiveNote(prev, (note) => ({
-        ...note,
-        content: note.content.trim()
-          ? `${note.content.trimEnd()}\n\n${text}`
-          : text,
-      })),
-    );
-  };
-
   const handleSelectNote = async (id: string) => {
     if (id === workspace.activeNoteId) return;
     if (!(await flushSave())) {
@@ -242,17 +223,23 @@ function NotepadPage() {
     setWorkspace((prev) => ({ ...prev, activeNoteId: id }));
   };
 
-  const handleNewNote = async () => {
+  const handleNewNote = async (
+    type: NoteType,
+    collectionId: string | null = null,
+  ) => {
     if (!(await flushSave())) {
       toast.error("Could not save. Try again.");
       return;
     }
-    const note = createNotepadNote();
+    const note = createNotepadNote("Untitled", type, collectionId);
     setWorkspace((prev) => ({
+      ...prev,
       notes: [...prev.notes, note],
+      collections: prev.collections ?? [],
       activeNoteId: note.id,
     }));
-    toast.success("New note created");
+    setViewMode("compose");
+    toast.success(type === "markdown" ? "Note created" : "Canvas created");
   };
 
   const handleDeleteNote = async (id: string) => {
@@ -274,6 +261,7 @@ function NotepadPage() {
 
     const next: NotepadWorkspaceData = {
       notes: nextNotes,
+      collections: workspace.collections ?? [],
       activeNoteId: nextActive,
     };
     setWorkspace(next);
@@ -300,6 +288,64 @@ function NotepadPage() {
         n.id === id ? { ...n, title: nextTitle.trim() || "Untitled" } : n,
       ),
     }));
+  };
+
+  const handleMoveNote = (noteId: string, collectionId: string | null) => {
+    setWorkspace((prev) => ({
+      ...prev,
+      notes: prev.notes.map((n) =>
+        n.id === noteId ? { ...n, collectionId } : n,
+      ),
+    }));
+  };
+
+  const handleNewCollection = () => {
+    const title = window.prompt("Collection name", "New collection");
+    if (title === null) return;
+    const collection = createNotepadCollection(title);
+    setWorkspace((prev) => ({
+      ...prev,
+      collections: [...(prev.collections ?? []), collection],
+    }));
+    toast.success("Collection created");
+  };
+
+  const handleRenameCollection = (id: string) => {
+    const collection = getWorkspaceCollections(workspace).find((c) => c.id === id);
+    const nextTitle = window.prompt(
+      "Rename collection",
+      collection?.title || "Untitled",
+    );
+    if (nextTitle === null) return;
+    const now = new Date().toISOString();
+    setWorkspace((prev) => ({
+      ...prev,
+      collections: (prev.collections ?? []).map((c) =>
+        c.id === id
+          ? { ...c, title: nextTitle.trim() || "Untitled", updatedAt: now }
+          : c,
+      ),
+    }));
+  };
+
+  const handleDeleteCollection = (id: string) => {
+    const collection = getWorkspaceCollections(workspace).find((c) => c.id === id);
+    const count = workspace.notes.filter((n) => n.collectionId === id).length;
+    const confirmed = window.confirm(
+      count > 0
+        ? `Delete collection "${collection?.title || "Untitled"}"? Notes inside will move to Uncategorized.`
+        : `Delete collection "${collection?.title || "Untitled"}"?`,
+    );
+    if (!confirmed) return;
+
+    setWorkspace((prev) => ({
+      ...prev,
+      collections: (prev.collections ?? []).filter((c) => c.id !== id),
+      notes: prev.notes.map((n) =>
+        n.collectionId === id ? { ...n, collectionId: null } : n,
+      ),
+    }));
+    toast.success("Collection deleted");
   };
 
   const saveStatusLabel = (() => {
@@ -376,14 +422,33 @@ function NotepadPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div
+      className={cn(
+        "flex h-screen flex-col",
+        viewMode === "compose" && noteType === "canvas"
+          ? "bg-white"
+          : "bg-background",
+      )}
+    >
       <Toaster />
-      <header className="flex shrink-0 items-center justify-between gap-4 border-b px-4 py-2">
+      <header
+        className={cn(
+          "flex shrink-0 items-center justify-between gap-4 px-3 py-1.5",
+          viewMode === "compose" && noteType === "canvas"
+            ? "absolute inset-x-0 top-0 z-40 border-none bg-transparent"
+            : "border-b",
+        )}
+      >
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
-            className="shrink-0"
+            className={cn(
+              "shrink-0",
+              viewMode === "compose" &&
+                noteType === "canvas" &&
+                "h-9 w-9 rounded-xl border border-black/[0.08] bg-white p-0 shadow-[0_1px_4px_rgba(0,0,0,0.08)] hover:bg-white",
+            )}
             onClick={() => setSidebarOpen((v) => !v)}
             aria-label={sidebarOpen ? "Hide notes sidebar" : "Show notes sidebar"}
             aria-expanded={sidebarOpen}
@@ -395,25 +460,46 @@ function NotepadPage() {
               <Menu className="h-4 w-4" />
             )}
           </Button>
-          <div className="min-w-0">
-            <h1 className="text-sm font-semibold tracking-tight">Notepad</h1>
-            <p
-              className={`text-xs ${
+          {!(viewMode === "compose" && noteType === "canvas") && (
+            <div className="min-w-0">
+              <h1 className="text-sm font-semibold tracking-tight">Notepad</h1>
+              <p
+                className={`text-xs ${
+                  saveStatus === "error"
+                    ? "text-destructive"
+                    : saveStatus === "saved"
+                      ? "text-green-600 dark:text-green-500"
+                      : "text-muted-foreground"
+                }`}
+              >
+                {saveStatusLabel}
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {viewMode === "compose" && noteType === "canvas" && (
+            <span
+              className={cn(
+                "hidden rounded-lg bg-white/90 px-2 py-1 text-[11px] shadow-sm sm:inline",
                 saveStatus === "error"
                   ? "text-destructive"
                   : saveStatus === "saved"
-                    ? "text-green-600 dark:text-green-500"
-                    : "text-muted-foreground"
-              }`}
+                    ? "text-green-600"
+                    : "text-[#1b1b1f]/45",
+              )}
             >
               {saveStatusLabel}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 sm:gap-2">
+            </span>
+          )}
           <Button
             variant={viewMode === "preview" ? "secondary" : "outline"}
             size="sm"
+            className={cn(
+              viewMode === "compose" &&
+                noteType === "canvas" &&
+                "rounded-xl border-black/[0.08] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.08)] hover:bg-white",
+            )}
             onClick={() =>
               setViewMode(viewMode === "preview" ? "compose" : "preview")
             }
@@ -427,6 +513,11 @@ function NotepadPage() {
           <Button
             variant="ghost"
             size="sm"
+            className={cn(
+              viewMode === "compose" &&
+                noteType === "canvas" &&
+                "rounded-xl border border-black/[0.08] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.08)] hover:bg-white",
+            )}
             onClick={() => void handleLogout()}
             aria-label="Sign out"
           >
@@ -436,11 +527,17 @@ function NotepadPage() {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      <div
+        className={cn(
+          "flex min-h-0 flex-1",
+          viewMode === "compose" && noteType === "canvas" && "relative",
+        )}
+      >
         {sidebarOpen && (
           <div id="notepad-sidebar" className="shrink-0">
             <NotepadSidebar
               notes={workspace.notes}
+              collections={getWorkspaceCollections(workspace)}
               activeNoteId={workspace.activeNoteId}
               onSelect={(id) => {
                 void handleSelectNote(id);
@@ -448,57 +545,85 @@ function NotepadPage() {
                   setSidebarOpen(false);
                 }
               }}
-              onNewNote={() => void handleNewNote()}
+              onNewNote={(type, collectionId) => {
+                void handleNewNote(type, collectionId ?? null);
+              }}
               onDelete={(id) => void handleDeleteNote(id)}
               onRename={handleRenameNote}
+              onMoveNote={handleMoveNote}
+              onNewCollection={handleNewCollection}
+              onRenameCollection={handleRenameCollection}
+              onDeleteCollection={handleDeleteCollection}
             />
           </div>
         )}
 
-        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 md:p-6">
-          <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
-            {contentLoading ? (
-              <p className="text-sm text-muted-foreground">Loading notes…</p>
-            ) : viewMode === "preview" ? (
-              <>
-                <h2 className="w-full text-2xl font-semibold tracking-tight">
-                  {title || "Untitled"}
-                </h2>
-                {inkData && (
-                  <StylusCanvas
-                    inkData={inkData}
-                    readOnly
-                    className="min-h-[220px] flex-none"
+        <main
+          className={cn(
+            "flex min-h-0 flex-1 flex-col",
+            viewMode === "compose" && noteType === "canvas"
+              ? "overflow-hidden bg-white"
+              : "overflow-y-auto p-4 md:p-6",
+          )}
+        >
+          {viewMode === "compose" && noteType === "canvas" && !contentLoading ? (
+            <StylusCanvas
+              inkData={inkData}
+              onInkChange={setInkData}
+              fillHeight
+              className="min-h-0 flex-1"
+            />
+          ) : (
+            <div
+              className={cn(
+                "mx-auto flex w-full max-w-5xl flex-col gap-4",
+                viewMode === "compose" && noteType === "canvas" && "min-h-0 flex-1",
+              )}
+            >
+              {contentLoading ? (
+                <p className="text-sm text-muted-foreground">Loading notes…</p>
+              ) : viewMode === "preview" ? (
+                <>
+                  <h2 className="w-full text-2xl font-semibold tracking-tight">
+                    {title || "Untitled"}
+                  </h2>
+                  {noteType === "canvas" ? (
+                    inkData ? (
+                      <StylusCanvas
+                        inkData={inkData}
+                        readOnly
+                        className="min-h-[220px] flex-none rounded-xl border border-black/10"
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        This canvas note is empty.
+                      </p>
+                    )
+                  ) : content.trim() ? (
+                    <MarkdownPreview content={content} className="flex-1" />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">This note is empty.</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Untitled"
+                    className="w-full shrink-0 bg-transparent text-xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/40 md:text-2xl"
                   />
-                )}
-                <MarkdownPreview content={content} className="flex-1" />
-              </>
-            ) : (
-              <>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Untitled"
-                  className="w-full bg-transparent text-xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/40 md:text-2xl"
-                />
-                <StylusCanvas
-                  inkData={inkData}
-                  handwritingMode={handwritingMode}
-                  onHandwritingModeChange={setHandwritingMode}
-                  onInkChange={setInkData}
-                  onTextRecognized={handleTextRecognized}
-                  className="flex-none"
-                />
-                <Textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Type here… Markdown supported."
-                  className="min-h-[200px] resize-y font-mono text-sm leading-relaxed"
-                />
-              </>
-            )}
-          </div>
+                  <Textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="Start writing… Markdown supported."
+                    className="min-h-[60vh] resize-y font-mono text-sm leading-relaxed"
+                  />
+                </>
+              )}
+            </div>
+          )}
         </main>
       </div>
     </div>

@@ -91,6 +91,7 @@ export async function handleNotepadContent(request: Request): Promise<Response> 
 
       const updatedAt = await saveNotepadWorkspace({
         notes: body.notes,
+        collections: Array.isArray(body.collections) ? body.collections : [],
         activeNoteId: body.activeNoteId,
       });
       return jsonResponse({ success: true, updatedAt });

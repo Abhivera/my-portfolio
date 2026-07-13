@@ -1,14 +1,36 @@
 import type {
+  NotepadCollection,
   NotepadNote,
+  NoteType,
   NotepadWorkspaceData,
 } from "../../lib/notepad/types";
+import { normalizeNoteType } from "../../lib/notepad/types";
 
-export function createNotepadNote(title = "Untitled"): NotepadNote {
+export { normalizeNoteType };
+
+export function createNotepadNote(
+  title = "Untitled",
+  noteType: NoteType = "canvas",
+  collectionId: string | null = null,
+): NotepadNote {
   const now = new Date().toISOString();
   return {
     id: crypto.randomUUID(),
     title,
+    noteType,
     content: "",
+    inkData: undefined,
+    collectionId,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export function createNotepadCollection(title = "New collection"): NotepadCollection {
+  const now = new Date().toISOString();
+  return {
+    id: crypto.randomUUID(),
+    title: title.trim() || "New collection",
     createdAt: now,
     updatedAt: now,
   };
@@ -16,7 +38,7 @@ export function createNotepadNote(title = "Untitled"): NotepadNote {
 
 export function defaultNotepadWorkspace(): NotepadWorkspaceData {
   const note = createNotepadNote();
-  return { notes: [note], activeNoteId: note.id };
+  return { notes: [note], collections: [], activeNoteId: note.id };
 }
 
 export function getActiveNote(
@@ -38,4 +60,10 @@ export function updateActiveNote(
         : note,
     ),
   };
+}
+
+export function getWorkspaceCollections(
+  workspace: NotepadWorkspaceData,
+): NotepadCollection[] {
+  return workspace.collections ?? [];
 }
