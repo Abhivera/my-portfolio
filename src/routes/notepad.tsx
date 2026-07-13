@@ -44,7 +44,7 @@ export const Route = createFileRoute("/notepad")({
   }),
 });
 
-const AUTOSAVE_DELAY_MS = 800;
+const AUTOSAVE_DELAY_MS = 1200;
 
 type SaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
 
@@ -208,29 +208,26 @@ function NotepadPage() {
     );
   };
 
-  const setInkData = (nextInkData: string | undefined) => {
-    setWorkspace((prev) =>
-      updateActiveNote(prev, (note) => ({ ...note, inkData: nextInkData })),
-    );
-  };
+  const setInkData = useCallback((nextInkData: string | undefined) => {
+    setWorkspace((prev) => {
+      const active = prev.notes.find((n) => n.id === prev.activeNoteId);
+      if (!active || active.inkData === nextInkData) return prev;
+      return updateActiveNote(prev, (note) => ({
+        ...note,
+        inkData: nextInkData,
+      }));
+    });
+  }, []);
 
-  const handleSelectNote = async (id: string) => {
+  const handleSelectNote = (id: string) => {
     if (id === workspace.activeNoteId) return;
-    if (!(await flushSave())) {
-      toast.error("Could not save. Try again.");
-      return;
-    }
     setWorkspace((prev) => ({ ...prev, activeNoteId: id }));
   };
 
-  const handleNewNote = async (
+  const handleNewNote = (
     type: NoteType,
     collectionId: string | null = null,
   ) => {
-    if (!(await flushSave())) {
-      toast.error("Could not save. Try again.");
-      return;
-    }
     const note = createNotepadNote("Untitled", type, collectionId);
     setWorkspace((prev) => ({
       ...prev,
@@ -435,11 +432,16 @@ function NotepadPage() {
         className={cn(
           "flex shrink-0 items-center justify-between gap-4 px-3 py-1.5",
           viewMode === "compose" && noteType === "canvas"
-            ? "absolute inset-x-0 top-0 z-40 border-none bg-transparent"
+            ? "pointer-events-none absolute inset-x-0 top-0 z-40 border-none bg-transparent"
             : "border-b",
         )}
       >
-        <div className="flex items-center gap-2">
+        <div
+          className={cn(
+            "flex items-center gap-2",
+            viewMode === "compose" && noteType === "canvas" && "pointer-events-auto",
+          )}
+        >
           <Button
             variant="ghost"
             size="sm"
@@ -477,7 +479,12 @@ function NotepadPage() {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div
+          className={cn(
+            "flex items-center gap-1.5 sm:gap-2",
+            viewMode === "compose" && noteType === "canvas" && "pointer-events-auto",
+          )}
+        >
           {viewMode === "compose" && noteType === "canvas" && (
             <span
               className={cn(
@@ -540,13 +547,13 @@ function NotepadPage() {
               collections={getWorkspaceCollections(workspace)}
               activeNoteId={workspace.activeNoteId}
               onSelect={(id) => {
-                void handleSelectNote(id);
+                handleSelectNote(id);
                 if (window.matchMedia("(max-width: 768px)").matches) {
                   setSidebarOpen(false);
                 }
               }}
               onNewNote={(type, collectionId) => {
-                void handleNewNote(type, collectionId ?? null);
+                handleNewNote(type, collectionId ?? null);
               }}
               onDelete={(id) => void handleDeleteNote(id)}
               onRename={handleRenameNote}

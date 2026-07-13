@@ -52,14 +52,16 @@ export function updateActiveNote(
   updater: (note: NotepadNote) => NotepadNote,
 ): NotepadWorkspaceData {
   const now = new Date().toISOString();
-  return {
-    ...workspace,
-    notes: workspace.notes.map((note) =>
-      note.id === workspace.activeNoteId
-        ? { ...updater(note), updatedAt: now }
-        : note,
-    ),
-  };
+  let changed = false;
+  const notes = workspace.notes.map((note) => {
+    if (note.id !== workspace.activeNoteId) return note;
+    const next = updater(note);
+    if (next === note) return note;
+    changed = true;
+    return { ...next, updatedAt: now };
+  });
+  if (!changed) return workspace;
+  return { ...workspace, notes };
 }
 
 export function getWorkspaceCollections(

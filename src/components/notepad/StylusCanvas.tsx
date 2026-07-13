@@ -27,7 +27,6 @@ import {
   MAX_PRESSURE_SENSITIVITY,
   MIN_PRESSURE_SENSITIVITY,
   collectCoalescedPoints,
-  formatPenStatus,
   isDrawablePointer,
   isPenEraserButton,
   normalizePointerPoint,
@@ -137,10 +136,17 @@ export function StylusCanvas({
   );
   const [hasInk, setHasInk] = useState(inkRef.current.strokes.length > 0);
   const [canRedo, setCanRedo] = useState(false);
-  const [penStatus, setPenStatus] = useState<string | null>(null);
   const [penSeen, setPenSeen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [showProps, setShowProps] = useState(true);
+
+  const onInkChangeRef = useRef(onInkChange);
+  const lastEmittedInkRef = useRef<string | undefined>(inkData);
+  const emitTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    onInkChangeRef.current = onInkChange;
+  }, [onInkChange]);
 
   useEffect(() => {
     stylusOnlyRef.current = stylusOnly;
@@ -166,11 +172,35 @@ export function StylusCanvas({
     pressureSensitivityRef.current = pressureSensitivity;
   }, [pressureSensitivity]);
 
-  const commitInk = useCallback(() => {
-    const serialized = serializeInkData(inkRef.current);
-    setHasInk(inkRef.current.strokes.length > 0);
-    onInkChange?.(serialized);
-  }, [onInkChange]);
+  const flushInkToParent = useCallback((serialized: string | undefined) => {
+    lastEmittedInkRef.current = serialized;
+    onInkChangeRef.current?.(serialized);
+  }, []);
+
+  const commitInk = useCallback(
+    (immediate = false) => {
+      const serialized = serializeInkData(inkRef.current);
+      setHasInk(inkRef.current.strokes.length > 0);
+      lastEmittedInkRef.current = serialized;
+
+      if (emitTimerRef.current !== null) {
+        window.clearTimeout(emitTimerRef.current);
+        emitTimerRef.current = null;
+      }
+
+      if (immediate) {
+        flushInkToParent(serialized);
+        return;
+      }
+
+      // Debounce parent/autosave updates so drawing stays smooth.
+      emitTimerRef.current = window.setTimeout(() => {
+        emitTimerRef.current = null;
+        flushInkToParent(serialized);
+      }, 350);
+    },
+    [flushInkToParent],
+  );
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current;
@@ -217,7 +247,10 @@ export function StylusCanvas({
   }, [pressureSensitivity, schedulePaint]);
 
   useEffect(() => {
+    // Ignore echoes of our own commits — re-parsing large ink freezes the UI.
+    if (inkData === lastEmittedInkRef.current) return;
     if (activePointerRef.current !== null) return;
+    lastEmittedInkRef.current = inkData;
     inkRef.current = parseInkData(inkData);
     redoStackRef.current = [];
     setCanRedo(false);
@@ -241,12 +274,17 @@ export function StylusCanvas({
       if (paintRafRef.current !== null) {
         window.cancelAnimationFrame(paintRafRef.current);
       }
+      if (emitTimerRef.current !== null) {
+        window.clearTimeout(emitTimerRef.current);
+        // Flush pending ink so we don't lose the last strokes.
+        flushInkToParent(serializeInkData(inkRef.current));
+      }
     };
-  }, []);
+  }, [flushInkToParent]);
 
   const markPenUsed = useCallback(() => {
     penRecentlyUsedRef.current = true;
-    setPenSeen(true);
+    setPenSeen((seen) => (seen ? seen : true));
     if (penCooldownRef.current !== null) {
       window.clearTimeout(penCooldownRef.current);
     }
@@ -257,7 +295,7 @@ export function StylusCanvas({
   }, []);
 
   const pushPoints = useCallback(
-    (points: InkPoint[], pointerType: string, pressure: number) => {
+    (points: InkPoint[]) => {
       const stroke = activeStrokeRef.current;
       if (!stroke || points.length === 0) return;
 
@@ -267,7 +305,6 @@ export function StylusCanvas({
         stroke.points.push(point);
       }
 
-      setPenStatus(formatPenStatus(pointerType, pressure));
       schedulePaint();
     },
     [schedulePaint],
@@ -302,7 +339,6 @@ export function StylusCanvas({
         color: useEraser ? undefined : strokeColorRef.current,
         opacity: useEraser ? undefined : opacityRef.current,
       };
-      setPenStatus(formatPenStatus(event.pointerType, event.pressure));
       schedulePaint();
     },
     [schedulePaint],
@@ -317,11 +353,10 @@ export function StylusCanvas({
       };
       redoStackRef.current = [];
       setCanRedo(false);
-      commitInk();
+      commitInk(false);
     }
     activeStrokeRef.current = null;
     activePointerRef.current = null;
-    setPenStatus(null);
     schedulePaint();
   }, [commitInk, schedulePaint]);
 
@@ -358,7 +393,7 @@ export function StylusCanvas({
       const canvasEl = canvasRef.current;
       if (!canvasEl) return;
       const rect = canvasEl.getBoundingClientRect();
-      pushPoints(collectCoalescedPoints(event, rect), event.pointerType, event.pressure);
+      pushPoints(collectCoalescedPoints(event, rect));
     };
 
     const onRawUpdate = (event: Event) => {
@@ -370,7 +405,7 @@ export function StylusCanvas({
       const canvasEl = canvasRef.current;
       if (!canvasEl) return;
       const rect = canvasEl.getBoundingClientRect();
-      pushPoints(collectCoalescedPoints(event, rect), event.pointerType, event.pressure);
+      pushPoints(collectCoalescedPoints(event, rect));
     };
 
     const onUp = (event: PointerEvent) => {
@@ -409,7 +444,7 @@ export function StylusCanvas({
       ...inkRef.current,
       strokes: strokes.slice(0, -1),
     };
-    commitInk();
+    commitInk(true);
     schedulePaint();
   };
 
@@ -423,7 +458,7 @@ export function StylusCanvas({
       ...inkRef.current,
       strokes: [...inkRef.current.strokes, ...next],
     };
-    commitInk();
+    commitInk(true);
     schedulePaint();
   };
 
@@ -433,7 +468,7 @@ export function StylusCanvas({
     redoStackRef.current = [];
     setCanRedo(false);
     inkRef.current = { version: 1, strokes: [] };
-    commitInk();
+    commitInk(true);
     schedulePaint();
   };
 
@@ -478,7 +513,7 @@ export function StylusCanvas({
       {floatingChrome && (
         <>
           {/* Top-center tool bar */}
-          <div className="pointer-events-none absolute inset-x-0 top-3 z-30 flex justify-center px-3">
+          <div className="pointer-events-none absolute inset-x-0 top-3 z-50 flex justify-center px-3">
             <div className="pointer-events-auto flex items-center gap-0.5 rounded-xl border border-black/[0.08] bg-white px-1.5 py-1 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.04)]">
               <ToolButton
                 active={stylusOnly}
@@ -535,7 +570,7 @@ export function StylusCanvas({
 
           {/* Left properties panel */}
           {showProps && tool === "pen" && (
-            <div className="absolute left-3 top-16 z-30 w-[200px] rounded-xl border border-black/[0.08] bg-white p-3 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.04)]">
+            <div className="absolute left-3 top-16 z-50 w-[200px] rounded-xl border border-black/[0.08] bg-white p-3 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.04)]">
               <PanelSection label="Stroke">
                 <div className="flex flex-wrap gap-1.5">
                   {INK_STROKE_COLORS.map((color) => {
@@ -646,7 +681,7 @@ export function StylusCanvas({
 
           {/* Eraser tip panel */}
           {showProps && tool === "eraser" && (
-            <div className="absolute left-3 top-16 z-30 w-[200px] rounded-xl border border-black/[0.08] bg-white p-3 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.04)]">
+            <div className="absolute left-3 top-16 z-50 w-[200px] rounded-xl border border-black/[0.08] bg-white p-3 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.04)]">
               <PanelSection label="Eraser size">
                 <div className="flex gap-1.5">
                   {STROKE_WIDTH_PRESETS.map((preset, index) => {
@@ -682,7 +717,7 @@ export function StylusCanvas({
           )}
 
           {/* Bottom-left zoom + undo/redo */}
-          <div className="absolute bottom-3 left-3 z-30 flex items-center gap-1.5">
+          <div className="absolute bottom-3 left-3 z-50 flex items-center gap-1.5">
             <div className="flex items-center rounded-xl border border-black/[0.08] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.08)]">
               <button
                 type="button"
@@ -733,15 +768,6 @@ export function StylusCanvas({
               </button>
             </div>
           </div>
-
-          {penStatus && (
-            <p
-              className="pointer-events-none absolute bottom-3 right-3 z-20 rounded-md bg-white/80 px-2 py-1 text-[11px] text-[#1b1b1f]/45 backdrop-blur-sm"
-              aria-live="polite"
-            >
-              {penStatus}
-            </p>
-          )}
         </>
       )}
 
