@@ -6,7 +6,11 @@ import {
   isDriveConfigured,
   uploadToDrive,
 } from "./drive.js";
-import { isNotepadHttpError } from "./errors.js";
+import {
+  isNotepadHttpError,
+  logNotepad,
+  serializeError,
+} from "./errors.js";
 import {
   addNoteAttachment,
   findNoteByShareToken,
@@ -52,10 +56,16 @@ function contentDisposition(filename: string, inline = false): string {
 }
 
 function catchToResponse(scope: string, err: unknown): Response {
-  console.error(`[${scope}]`, err);
+  const serialized = serializeError(err);
   if (isNotepadHttpError(err)) {
+    logNotepad(scope, "error", err.message, {
+      status: err.status,
+      details: err.details,
+      error: serialized,
+    });
     return errorResponse(err.message, err.status);
   }
+  logNotepad(scope, "error", "Unhandled error", { error: serialized });
   return errorResponse("Internal server error", 500);
 }
 
@@ -236,12 +246,18 @@ export async function handleNotepadShare(request: Request): Promise<Response> {
 export async function handleNotepadAttachments(
   request: Request,
 ): Promise<Response> {
+  const scope = "notepad/attachments";
   try {
     if (request.method === "GET") {
       const url = new URL(request.url);
       const id = url.searchParams.get("id")?.trim() ?? "";
       const shareToken = url.searchParams.get("token")?.trim() ?? "";
       const inline = url.searchParams.get("inline") === "1";
+      logNotepad(scope, "info", "GET attachment", {
+        id,
+        inline,
+        shared: Boolean(shareToken),
+      });
       if (!id) {
         return errorResponse("Attachment id is required", 400);
       }
@@ -258,10 +274,16 @@ export async function handleNotepadAttachments(
       }
 
       if (!isDriveConfigured()) {
+        logNotepad(scope, "error", "Drive not configured for GET");
         return errorResponse("Google Drive is not configured", 503);
       }
 
       const file = await downloadFromDrive(id);
+      logNotepad(scope, "info", "GET attachment success", {
+        id,
+        filename: file.name,
+        bytes: file.data.length,
+      });
       return new Response(new Uint8Array(file.data), {
         headers: {
           "Content-Type": file.mimeType,
@@ -274,11 +296,13 @@ export async function handleNotepadAttachments(
     }
 
     if (!requireAuth(request)) {
+      logNotepad(scope, "warn", "Unauthorized", { method: request.method });
       return errorResponse("Unauthorized", 401);
     }
 
     if (request.method === "POST") {
       if (!isDriveConfigured()) {
+        logNotepad(scope, "error", "Drive not configured for POST");
         return errorResponse("Google Drive is not configured", 503);
       }
 
@@ -290,14 +314,26 @@ export async function handleNotepadAttachments(
           : "";
 
       if (!(file instanceof File)) {
+        logNotepad(scope, "warn", "POST missing file", {
+          noteId,
+          fileType: file == null ? "null" : typeof file,
+        });
         return errorResponse("File is required", 400);
       }
       if (!noteId) {
         return errorResponse("noteId is required", 400);
       }
 
+      logNotepad(scope, "info", "POST upload started", {
+        noteId,
+        filename: file.name,
+        mimeType: file.type || "application/octet-stream",
+        bytes: file.size,
+      });
+
       const workspace = await getNotepadWorkspace();
       if (!workspace.notes.some((n) => n.id === noteId)) {
+        logNotepad(scope, "warn", "Note not found for upload", { noteId });
         return errorResponse("Note not found", 404);
       }
 
@@ -318,13 +354,27 @@ export async function handleNotepadAttachments(
 
       const result = await addNoteAttachment(noteId, attachment);
       if (!result) {
+        logNotepad(scope, "warn", "Note missing after Drive upload; cleanup", {
+          noteId,
+          fileId: uploaded.id,
+        });
         try {
           await deleteFromDrive(uploaded.id);
-        } catch {
-          /* best-effort cleanup */
+        } catch (cleanupErr) {
+          logNotepad(scope, "error", "Cleanup delete failed", {
+            fileId: uploaded.id,
+            error: serializeError(cleanupErr),
+          });
         }
         return errorResponse("Note not found", 404);
       }
+
+      logNotepad(scope, "info", "POST upload complete", {
+        noteId,
+        attachmentId: result.attachment.id,
+        filename: result.attachment.name,
+        bytes: result.attachment.size,
+      });
 
       return jsonResponse(
         {
@@ -343,6 +393,7 @@ export async function handleNotepadAttachments(
       };
       const noteId = body.noteId?.trim() ?? "";
       const attachmentId = body.attachmentId?.trim() ?? "";
+      logNotepad(scope, "info", "DELETE attachment", { noteId, attachmentId });
       if (!noteId || !attachmentId) {
         return errorResponse("noteId and attachmentId are required", 400);
       }
@@ -356,9 +407,20 @@ export async function handleNotepadAttachments(
         try {
           await deleteFromDrive(attachmentId);
         } catch (err) {
-          console.error("[notepad/attachments] drive delete", err);
+          // Metadata already removed — log Drive cleanup failure but succeed.
+          logNotepad(scope, "error", "Drive delete after metadata remove failed", {
+            noteId,
+            attachmentId,
+            error: serializeError(err),
+          });
         }
       }
+
+      logNotepad(scope, "info", "DELETE attachment complete", {
+        noteId,
+        attachmentId,
+        removed: Boolean(result.removed),
+      });
 
       return jsonResponse({
         success: true,
@@ -370,6 +432,6 @@ export async function handleNotepadAttachments(
 
     return errorResponse("Method not allowed", 405);
   } catch (err) {
-    return catchToResponse("notepad/attachments", err);
+    return catchToResponse(scope, err);
   }
 }
