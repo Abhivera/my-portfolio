@@ -1,19 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Eye, Lock, LogOut, Menu, PanelLeftClose } from "lucide-react";
+import { Eye, Globe, Link2Off, Lock, LogOut, Menu, PanelLeftClose, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NotepadSidebar } from "@/components/notepad/NotepadSidebar";
+import { NoteAttachments } from "@/components/notepad/NoteAttachments";
 import { MarkdownPreview } from "@/components/notepad/MarkdownPreview";
 import { StylusCanvas } from "@/components/notepad/StylusCanvas";
 import {
+  createNoteShareLink,
+  deleteNotepadAttachment,
   getNotepadAuthStatus,
   getNotepadWorkspace,
   logoutNotepad,
+  revokeNoteShareLink,
   saveNotepadWorkspace,
+  sharedNoteUrl,
   verifyNotepadPassword,
 } from "@/lib/notepad-client";
 import {
@@ -25,7 +30,11 @@ import {
   normalizeNoteType,
   updateActiveNote,
 } from "@/lib/notepad-utils";
-import type { NoteType, NotepadWorkspaceData } from "../../lib/notepad/types";
+import type {
+  NoteType,
+  NotepadAttachment,
+  NotepadWorkspaceData,
+} from "../../lib/notepad/types";
 import {
   getInitialNotepadViewMode,
   persistNotepadViewMode,
@@ -219,6 +228,12 @@ function NotepadPage() {
     });
   }, []);
 
+  const setAttachments = useCallback((attachments: NotepadAttachment[]) => {
+    setWorkspace((prev) =>
+      updateActiveNote(prev, (note) => ({ ...note, attachments })),
+    );
+  }, []);
+
   const handleSelectNote = (id: string) => {
     if (id === workspace.activeNoteId) return;
     setWorkspace((prev) => ({ ...prev, activeNoteId: id }));
@@ -250,6 +265,15 @@ function NotepadPage() {
     );
     if (!confirmed) return;
 
+    const attachments = note?.attachments ?? [];
+    for (const attachment of attachments) {
+      try {
+        await deleteNotepadAttachment(id, attachment.id);
+      } catch {
+        /* best-effort Drive cleanup */
+      }
+    }
+
     const nextNotes = workspace.notes.filter((n) => n.id !== id);
     const nextActive =
       workspace.activeNoteId === id
@@ -274,17 +298,70 @@ function NotepadPage() {
     }
   };
 
-  const handleRenameNote = (id: string) => {
-    const note = workspace.notes.find((n) => n.id === id);
-    const nextTitle = window.prompt("Rename note", note?.title || "Untitled");
-    if (nextTitle === null) return;
-
+  const handleRenameNote = (id: string, nextTitle: string) => {
     setWorkspace((prev) => ({
       ...prev,
       notes: prev.notes.map((n) =>
         n.id === id ? { ...n, title: nextTitle.trim() || "Untitled" } : n,
       ),
     }));
+  };
+
+  const setNoteShareTokenLocal = (noteId: string, shareToken: string | null) => {
+    setWorkspace((prev) => ({
+      ...prev,
+      notes: prev.notes.map((n) =>
+        n.id === noteId ? { ...n, shareToken } : n,
+      ),
+    }));
+  };
+
+  const handleShareNote = async () => {
+    if (!activeNote) return;
+    try {
+      const result = await createNoteShareLink(activeNote.id);
+      if (!result.shareToken) {
+        toast.error("Could not create share link");
+        return;
+      }
+      setNoteShareTokenLocal(activeNote.id, result.shareToken);
+      const url = sharedNoteUrl(result.shareToken);
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success("Public link copied — anyone with the link can view");
+      } catch {
+        toast.success("Share link ready", { description: url });
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not share note");
+    }
+  };
+
+  const handleCopyShareLink = async () => {
+    const token = activeNote?.shareToken?.trim();
+    if (!token) return;
+    const url = sharedNoteUrl(token);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied");
+    } catch {
+      toast.message(url);
+    }
+  };
+
+  const handleUnshareNote = async () => {
+    if (!activeNote?.shareToken) return;
+    const confirmed = window.confirm(
+      "Stop public sharing? The old link will stop working.",
+    );
+    if (!confirmed) return;
+    try {
+      await revokeNoteShareLink(activeNote.id);
+      setNoteShareTokenLocal(activeNote.id, null);
+      toast.success("Share link revoked");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not unshare");
+    }
   };
 
   const handleMoveNote = (noteId: string, collectionId: string | null) => {
@@ -307,13 +384,7 @@ function NotepadPage() {
     toast.success("Collection created");
   };
 
-  const handleRenameCollection = (id: string) => {
-    const collection = getWorkspaceCollections(workspace).find((c) => c.id === id);
-    const nextTitle = window.prompt(
-      "Rename collection",
-      collection?.title || "Untitled",
-    );
-    if (nextTitle === null) return;
+  const handleRenameCollection = (id: string, nextTitle: string) => {
     const now = new Date().toISOString();
     setWorkspace((prev) => ({
       ...prev,
@@ -499,6 +570,57 @@ function NotepadPage() {
               {saveStatusLabel}
             </span>
           )}
+          {activeNote?.shareToken ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  viewMode === "compose" &&
+                    noteType === "canvas" &&
+                    "rounded-xl border-black/[0.08] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.08)] hover:bg-white",
+                )}
+                onClick={() => void handleCopyShareLink()}
+                aria-label="Copy public share link"
+                title="Copy public link"
+              >
+                <Globe className="h-4 w-4 sm:mr-1.5 text-emerald-600" />
+                <span className="hidden sm:inline">Copy link</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  viewMode === "compose" &&
+                    noteType === "canvas" &&
+                    "rounded-xl border border-black/[0.08] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.08)] hover:bg-white",
+                )}
+                onClick={() => void handleUnshareNote()}
+                aria-label="Stop sharing"
+                title="Stop sharing"
+              >
+                <Link2Off className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Unshare</span>
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                viewMode === "compose" &&
+                  noteType === "canvas" &&
+                  "rounded-xl border-black/[0.08] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.08)] hover:bg-white",
+              )}
+              onClick={() => void handleShareNote()}
+              disabled={!activeNote}
+              aria-label="Share note publicly"
+              title="Share publicly"
+            >
+              <Share2 className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Share</span>
+            </Button>
+          )}
           <Button
             variant={viewMode === "preview" ? "secondary" : "outline"}
             size="sm"
@@ -574,12 +696,26 @@ function NotepadPage() {
           )}
         >
           {viewMode === "compose" && noteType === "canvas" && !contentLoading ? (
-            <StylusCanvas
-              inkData={inkData}
-              onInkChange={setInkData}
-              fillHeight
-              className="min-h-0 flex-1"
-            />
+            <div className="relative flex min-h-0 flex-1 flex-col">
+              <StylusCanvas
+                inkData={inkData}
+                onInkChange={setInkData}
+                fillHeight
+                className="min-h-0 flex-1"
+              />
+              {activeNote && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-start p-3 md:p-4">
+                  <div className="pointer-events-auto max-w-md">
+                    <NoteAttachments
+                      noteId={activeNote.id}
+                      attachments={activeNote.attachments ?? []}
+                      onChange={setAttachments}
+                      compact
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <div
               className={cn(
@@ -611,6 +747,15 @@ function NotepadPage() {
                   ) : (
                     <p className="text-sm text-muted-foreground">This note is empty.</p>
                   )}
+                  {activeNote && (
+                    <NoteAttachments
+                      noteId={activeNote.id}
+                      attachments={activeNote.attachments ?? []}
+                      onChange={setAttachments}
+                      readOnly
+                      className="mt-2"
+                    />
+                  )}
                 </>
               ) : (
                 <>
@@ -625,8 +770,16 @@ function NotepadPage() {
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     placeholder="Start writing… Markdown supported."
-                    className="min-h-[60vh] resize-y font-mono text-sm leading-relaxed"
+                    className="min-h-[50vh] resize-y font-mono text-sm leading-relaxed"
                   />
+                  {activeNote && (
+                    <NoteAttachments
+                      noteId={activeNote.id}
+                      attachments={activeNote.attachments ?? []}
+                      onChange={setAttachments}
+                      className="mt-2"
+                    />
+                  )}
                 </>
               )}
             </div>

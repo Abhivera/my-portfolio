@@ -32,6 +32,15 @@ export function normalizeNoteType(
   return "canvas";
 }
 
+/** Metadata only — file bytes live in Google Drive. */
+export type NotepadAttachment = {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+};
+
 export type NotepadNote = {
   id: string;
   title: string;
@@ -40,7 +49,21 @@ export type NotepadNote = {
   inkData?: string;
   /** Optional folder; omitted/null = uncategorized. */
   collectionId?: string | null;
+  /** When set, note is publicly readable at /notepad/share/{shareToken}. */
+  shareToken?: string | null;
+  /** Files stored in Google Drive (metadata only). */
+  attachments?: NotepadAttachment[];
   createdAt: string;
+  updatedAt: string;
+};
+
+/** Public payload returned for a shared note (no auth). */
+export type PublicSharedNote = {
+  title: string;
+  noteType: NoteType;
+  content: string;
+  inkData?: string;
+  attachments?: NotepadAttachment[];
   updatedAt: string;
 };
 
@@ -78,3 +101,10 @@ export const MAX_COLLECTIONS = 30;
 export const MAX_TITLE_LENGTH = 200;
 export const MAX_CONTENT_LENGTH = 500_000;
 export const MAX_INK_DATA_LENGTH = 1_000_000;
+export const MAX_ATTACHMENTS_PER_NOTE = 20;
+export const MAX_ATTACHMENT_NAME_LENGTH = 200;
+export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
+/** HTML file input `accept` — keep in sync with Drive allowlists in drive.ts. */
+export const ATTACHMENT_FILE_ACCEPT =
+  "image/*,audio/*,video/*,text/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.zip,.json";

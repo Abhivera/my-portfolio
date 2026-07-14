@@ -21,6 +21,7 @@ export function createNotepadNote(
     content: "",
     inkData: undefined,
     collectionId,
+    attachments: [],
     createdAt: now,
     updatedAt: now,
   };

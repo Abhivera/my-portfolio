@@ -25,6 +25,7 @@
     "@tanstack/router-plugin": "^1.167.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "googleapis": "^173.0.0",
     "lucide-react": "^0.575.0",
     "mongodb": "^6.21.0",
     "react": "^19.2.0",

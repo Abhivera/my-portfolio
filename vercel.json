@@ -10,7 +10,7 @@
   ],
   "functions": {
     "api/notepad/*.ts": {
-      "maxDuration": 15
+      "maxDuration": 30
     },
     "api/goal/*.ts": {
       "maxDuration": 15

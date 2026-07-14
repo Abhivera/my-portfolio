@@ -1,6 +1,21 @@
+import { randomBytes } from "node:crypto";
 import { checkPassword } from "./auth.js";
-import { getNotepadWorkspace, saveNotepadWorkspace } from "./store.js";
-import type { NotepadWorkspaceData } from "./types.js";
+import {
+  deleteFromDrive,
+  downloadFromDrive,
+  isDriveConfigured,
+  uploadToDrive,
+} from "./drive.js";
+import { isNotepadHttpError } from "./errors.js";
+import {
+  addNoteAttachment,
+  findNoteByShareToken,
+  getNotepadWorkspace,
+  removeNoteAttachment,
+  saveNotepadWorkspace,
+  setNoteShareToken,
+} from "./store.js";
+import { normalizeNoteType, type NotepadWorkspaceData } from "./types.js";
 import {
   clearSessionCookieHeader,
   getSessionFromCookieHeader,
@@ -19,6 +34,29 @@ function jsonResponse(
 
 function errorResponse(message: string, status: number): Response {
   return jsonResponse({ error: message }, { status });
+}
+
+function requireAuth(request: Request): boolean {
+  const session = getSessionFromCookieHeader(request.headers.get("cookie"));
+  return Boolean(session?.authenticated);
+}
+
+function createShareToken(): string {
+  return randomBytes(24).toString("base64url");
+}
+
+function contentDisposition(filename: string, inline = false): string {
+  const safe = filename.replace(/[^\w.\- ()[\]]+/g, "_").slice(0, 180);
+  const disposition = inline ? "inline" : "attachment";
+  return `${disposition}; filename="${safe}"`;
+}
+
+function catchToResponse(scope: string, err: unknown): Response {
+  console.error(`[${scope}]`, err);
+  if (isNotepadHttpError(err)) {
+    return errorResponse(err.message, err.status);
+  }
+  return errorResponse("Internal server error", 500);
 }
 
 export async function handleNotepadAuth(request: Request): Promise<Response> {
@@ -72,8 +110,7 @@ export async function handleNotepadAuth(request: Request): Promise<Response> {
 }
 
 export async function handleNotepadContent(request: Request): Promise<Response> {
-  const session = getSessionFromCookieHeader(request.headers.get("cookie"));
-  if (!session?.authenticated) {
+  if (!requireAuth(request)) {
     return errorResponse("Unauthorized", 401);
   }
 
@@ -101,5 +138,238 @@ export async function handleNotepadContent(request: Request): Promise<Response> 
   } catch (err) {
     console.error("[notepad/content]", err);
     return errorResponse("Internal server error", 500);
+  }
+}
+
+/**
+ * Share endpoints:
+ * - GET ?token=… — public read (no auth)
+ * - POST { noteId } — create/enable share link (auth)
+ * - DELETE { noteId } — revoke share link (auth)
+ */
+export async function handleNotepadShare(request: Request): Promise<Response> {
+  try {
+    if (request.method === "GET") {
+      const url = new URL(request.url);
+      const token = url.searchParams.get("token")?.trim() ?? "";
+      if (!token) {
+        return errorResponse("Share token is required", 400);
+      }
+
+      const note = await findNoteByShareToken(token);
+      if (!note) {
+        return errorResponse("Shared note not found", 404);
+      }
+
+      const noteType = normalizeNoteType(note);
+      return jsonResponse({
+        title: note.title || "Untitled",
+        noteType,
+        content: noteType === "markdown" ? note.content : "",
+        inkData: noteType === "canvas" ? note.inkData : undefined,
+        attachments: note.attachments ?? [],
+        updatedAt: note.updatedAt,
+      });
+    }
+
+    if (!requireAuth(request)) {
+      return errorResponse("Unauthorized", 401);
+    }
+
+    if (request.method === "POST") {
+      const body = (await request.json()) as { noteId?: string };
+      if (!body.noteId?.trim()) {
+        return errorResponse("noteId is required", 400);
+      }
+
+      const workspace = await getNotepadWorkspace();
+      const existing = workspace.notes.find((n) => n.id === body.noteId);
+      if (!existing) {
+        return errorResponse("Note not found", 404);
+      }
+
+      const token = existing.shareToken?.trim() || createShareToken();
+      const updated = await setNoteShareToken(body.noteId, token);
+      if (!updated) {
+        return errorResponse("Note not found", 404);
+      }
+
+      return jsonResponse({
+        success: true,
+        noteId: body.noteId,
+        shareToken: updated.shareToken,
+        sharePath: `/notepad/share/${updated.shareToken}`,
+      });
+    }
+
+    if (request.method === "DELETE") {
+      const body = (await request.json()) as { noteId?: string };
+      if (!body.noteId?.trim()) {
+        return errorResponse("noteId is required", 400);
+      }
+
+      const updated = await setNoteShareToken(body.noteId, null);
+      if (!updated) {
+        return errorResponse("Note not found", 404);
+      }
+
+      return jsonResponse({
+        success: true,
+        noteId: body.noteId,
+        shareToken: null,
+      });
+    }
+
+    return errorResponse("Method not allowed", 405);
+  } catch (err) {
+    console.error("[notepad/share]", err);
+    return errorResponse("Internal server error", 500);
+  }
+}
+
+/**
+ * Attachments (Google Drive):
+ * - POST multipart FormData { file, noteId } — upload (auth)
+ * - GET ?id=… — download/stream file (auth, or public with ?token= share token)
+ * - DELETE { noteId, attachmentId } — remove from note + Drive (auth)
+ */
+export async function handleNotepadAttachments(
+  request: Request,
+): Promise<Response> {
+  try {
+    if (request.method === "GET") {
+      const url = new URL(request.url);
+      const id = url.searchParams.get("id")?.trim() ?? "";
+      const shareToken = url.searchParams.get("token")?.trim() ?? "";
+      const inline = url.searchParams.get("inline") === "1";
+      if (!id) {
+        return errorResponse("Attachment id is required", 400);
+      }
+
+      const authed = requireAuth(request);
+      if (!authed) {
+        if (!shareToken) {
+          return errorResponse("Unauthorized", 401);
+        }
+        const shared = await findNoteByShareToken(shareToken);
+        if (!shared?.attachments?.some((a) => a.id === id)) {
+          return errorResponse("Shared note not found", 404);
+        }
+      }
+
+      if (!isDriveConfigured()) {
+        return errorResponse("Google Drive is not configured", 503);
+      }
+
+      const file = await downloadFromDrive(id);
+      return new Response(new Uint8Array(file.data), {
+        headers: {
+          "Content-Type": file.mimeType,
+          "Content-Disposition": contentDisposition(file.name, inline),
+          "Cache-Control": authed
+            ? "private, max-age=3600"
+            : "public, max-age=300",
+        },
+      });
+    }
+
+    if (!requireAuth(request)) {
+      return errorResponse("Unauthorized", 401);
+    }
+
+    if (request.method === "POST") {
+      if (!isDriveConfigured()) {
+        return errorResponse("Google Drive is not configured", 503);
+      }
+
+      const formData = await request.formData();
+      const file = formData.get("file");
+      const noteId =
+        typeof formData.get("noteId") === "string"
+          ? String(formData.get("noteId")).trim()
+          : "";
+
+      if (!(file instanceof File)) {
+        return errorResponse("File is required", 400);
+      }
+      if (!noteId) {
+        return errorResponse("noteId is required", 400);
+      }
+
+      const workspace = await getNotepadWorkspace();
+      if (!workspace.notes.some((n) => n.id === noteId)) {
+        return errorResponse("Note not found", 404);
+      }
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const uploaded = await uploadToDrive(
+        buffer,
+        file.type || "application/octet-stream",
+        file.name || "attachment",
+      );
+
+      const attachment = {
+        id: uploaded.id,
+        name: uploaded.name,
+        mimeType: uploaded.mimeType,
+        size: uploaded.size,
+        createdAt: new Date().toISOString(),
+      };
+
+      const result = await addNoteAttachment(noteId, attachment);
+      if (!result) {
+        try {
+          await deleteFromDrive(uploaded.id);
+        } catch {
+          /* best-effort cleanup */
+        }
+        return errorResponse("Note not found", 404);
+      }
+
+      return jsonResponse(
+        {
+          success: true,
+          noteId,
+          attachment: result.attachment,
+        },
+        { status: 201 },
+      );
+    }
+
+    if (request.method === "DELETE") {
+      const body = (await request.json()) as {
+        noteId?: string;
+        attachmentId?: string;
+      };
+      const noteId = body.noteId?.trim() ?? "";
+      const attachmentId = body.attachmentId?.trim() ?? "";
+      if (!noteId || !attachmentId) {
+        return errorResponse("noteId and attachmentId are required", 400);
+      }
+
+      const result = await removeNoteAttachment(noteId, attachmentId);
+      if (!result) {
+        return errorResponse("Note not found", 404);
+      }
+
+      if (result.removed && isDriveConfigured()) {
+        try {
+          await deleteFromDrive(attachmentId);
+        } catch (err) {
+          console.error("[notepad/attachments] drive delete", err);
+        }
+      }
+
+      return jsonResponse({
+        success: true,
+        noteId,
+        attachmentId,
+        removed: Boolean(result.removed),
+      });
+    }
+
+    return errorResponse("Method not allowed", 405);
+  } catch (err) {
+    return catchToResponse("notepad/attachments", err);
   }
 }

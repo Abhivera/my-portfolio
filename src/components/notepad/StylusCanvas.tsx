@@ -599,7 +599,7 @@ export function StylusCanvas({
                 <div className="flex gap-1.5">
                   {STROKE_WIDTH_PRESETS.map((preset, index) => {
                     const selected = strokeWidth === preset;
-                    const lineH = index === 0 ? 1.5 : index === 1 ? 2.5 : 4;
+                    const lineH = index === 0 ? 1 : index === 1 ? 1.75 : 3;
                     return (
                       <button
                         key={preset}
@@ -686,7 +686,7 @@ export function StylusCanvas({
                 <div className="flex gap-1.5">
                   {STROKE_WIDTH_PRESETS.map((preset, index) => {
                     const selected = strokeWidth === preset;
-                    const lineH = index === 0 ? 1.5 : index === 1 ? 2.5 : 4;
+                    const lineH = index === 0 ? 1 : index === 1 ? 1.75 : 3;
                     return (
                       <button
                         key={preset}

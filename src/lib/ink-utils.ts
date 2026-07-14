@@ -1,11 +1,11 @@
 import type { InkData, InkStroke } from "../../lib/notepad/types";
 
-export const DEFAULT_STROKE_WIDTH = 2.5;
-export const MIN_STROKE_WIDTH = 1;
-export const MAX_STROKE_WIDTH = 12;
+export const DEFAULT_STROKE_WIDTH = 1;
+export const MIN_STROKE_WIDTH = 0.4;
+export const MAX_STROKE_WIDTH = 6;
 
 /** Excalidraw-style stroke width presets (thin / regular / bold). */
-export const STROKE_WIDTH_PRESETS = [1.5, 2.5, 4.5] as const;
+export const STROKE_WIDTH_PRESETS = [0.6, 1, 1.75] as const;
 
 export const DEFAULT_INK_COLOR = "#1e1e1e";
 export const INK_STROKE_COLORS = [
@@ -62,7 +62,8 @@ function strokeWidthPx(
   pressureSensitivity: number,
 ): number {
   const mapped = mapPressure(pressure, pressureSensitivity);
-  return (stroke.width * (0.3 + mapped * 2.2) * canvasMinDim) / 100;
+  // Keep strokes pen-thin: width units map to ~0.6–2% of canvas min edge.
+  return (stroke.width * (0.35 + mapped * 1.1) * canvasMinDim) / 100;
 }
 
 export function drawStroke(

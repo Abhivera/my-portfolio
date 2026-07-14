@@ -1,6 +1,11 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
-import { handleNotepadAuth, handleNotepadContent } from "../notepad/handlers";
+import {
+  handleNotepadAttachments,
+  handleNotepadAuth,
+  handleNotepadContent,
+  handleNotepadShare,
+} from "../notepad/handlers";
 import { handleGoalAuth, handleTodoContent } from "../todo/handlers";
 import {
   handleBlogAdmin,
@@ -69,6 +74,10 @@ export function createApiDevMiddleware(): Connect.NextHandleFunction {
       response = await handleNotepadAuth(request);
     } else if (pathname.startsWith("/api/notepad/content")) {
       response = await handleNotepadContent(request);
+    } else if (pathname.startsWith("/api/notepad/share")) {
+      response = await handleNotepadShare(request);
+    } else if (pathname.startsWith("/api/notepad/attachments")) {
+      response = await handleNotepadAttachments(request);
     } else if (pathname.startsWith("/api/goal/auth")) {
       response = await handleGoalAuth(request);
     } else if (pathname.startsWith("/api/goal/content")) {

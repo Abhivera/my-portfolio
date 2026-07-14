@@ -7,6 +7,32 @@ export function requestBody(req: VercelRequest): string | undefined {
   return undefined;
 }
 
+export async function readRawBody(req: VercelRequest): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
+/** Build a Web Request for multipart / raw-body routes (`bodyParser: false`). */
+export async function toRawWebRequest(
+  req: VercelRequest,
+  fallbackPath: string,
+): Promise<Request> {
+  const url = new URL(req.url ?? fallbackPath, `https://${req.headers.host}`);
+  const body =
+    req.method !== "GET" && req.method !== "HEAD"
+      ? await readRawBody(req)
+      : undefined;
+
+  return new Request(url, {
+    method: req.method,
+    headers: req.headers as HeadersInit,
+    body: body?.length ? new Uint8Array(body) : undefined,
+  });
+}
+
 export async function sendWebResponse(
   res: VercelResponse,
   response: Response,
