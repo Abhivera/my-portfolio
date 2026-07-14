@@ -8,7 +8,7 @@ import {
 export const config = {
   api: {
     bodyParser: false,
-    sizeLimit: "12mb",
+    sizeLimit: "4.5mb",
   },
 };
 

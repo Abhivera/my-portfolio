@@ -95,45 +95,41 @@ function SharedNotePage() {
               {note.title || "Untitled"}
             </h1>
           </div>
-          <p className="shrink-0 text-xs text-muted-foreground">
-            Read-only · no sign-in
-          </p>
+          <div className="flex shrink-0 items-center gap-3">
+            {attachments.length > 0 && (
+              <NoteAttachments
+                noteId="shared"
+                attachments={attachments}
+                onChange={() => {}}
+                readOnly
+                shareToken={token}
+              />
+            )}
+            <p className="hidden text-xs text-muted-foreground sm:block">
+              Read-only · no sign-in
+            </p>
+          </div>
         </div>
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col">
         {note.noteType === "canvas" ? (
-          <>
-            {note.inkData ? (
-              <div className="min-h-0 flex-1 bg-white">
-                <StylusCanvas
-                  inkData={note.inkData}
-                  readOnly
-                  fillHeight
-                  className="min-h-[70vh] flex-1"
-                />
-              </div>
-            ) : (
-              <div className="mx-auto w-full max-w-5xl px-4 py-10">
-                <p className="text-sm text-muted-foreground">
-                  This canvas note is empty.
-                </p>
-              </div>
-            )}
-            {attachments.length > 0 && (
-              <div className="border-t px-4 py-6 md:px-6">
-                <div className="mx-auto w-full max-w-5xl">
-                  <NoteAttachments
-                    noteId="shared"
-                    attachments={attachments}
-                    onChange={() => {}}
-                    readOnly
-                    shareToken={token}
-                  />
-                </div>
-              </div>
-            )}
-          </>
+          note.inkData ? (
+            <div className="min-h-0 flex-1 bg-white">
+              <StylusCanvas
+                inkData={note.inkData}
+                readOnly
+                fillHeight
+                className="min-h-[70vh] flex-1"
+              />
+            </div>
+          ) : (
+            <div className="mx-auto w-full max-w-5xl px-4 py-10">
+              <p className="text-sm text-muted-foreground">
+                This canvas note is empty.
+              </p>
+            </div>
+          )
         ) : (
           <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8 md:px-6">
             {note.content.trim() ? (
@@ -141,13 +137,6 @@ function SharedNotePage() {
             ) : (
               <p className="text-sm text-muted-foreground">This note is empty.</p>
             )}
-            <NoteAttachments
-              noteId="shared"
-              attachments={attachments}
-              onChange={() => {}}
-              readOnly
-              shareToken={token}
-            />
           </div>
         )}
       </main>

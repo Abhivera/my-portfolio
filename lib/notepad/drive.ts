@@ -42,21 +42,51 @@ type DriveUploadResult = {
   size: number;
 };
 
+/**
+ * Vercel / dotenv often store the key with literal `\n`, wrapping quotes, or
+ * `\r\n`. OpenSSL 3 rejects those with ERR_OSSL_UNSUPPORTED (DECODER).
+ */
+function normalizePrivateKey(raw: string): string {
+  let key = raw.trim();
+
+  // Strip one layer of wrapping quotes from dashboard / .env paste.
+  if (
+    (key.startsWith('"') && key.endsWith('"')) ||
+    (key.startsWith("'") && key.endsWith("'"))
+  ) {
+    key = key.slice(1, -1).trim();
+  }
+
+  key = key
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .trim();
+
+  if (!key.includes("BEGIN") || !key.includes("PRIVATE KEY")) {
+    throw new NotepadHttpError(
+      "GOOGLE_DRIVE_PRIVATE_KEY is invalid. Paste the full PEM including BEGIN/END lines (escape newlines as \\n on Vercel).",
+      503,
+    );
+  }
+
+  return key;
+}
+
 function getDriveCredentials() {
   const clientEmail = process.env.GOOGLE_DRIVE_CLIENT_EMAIL?.trim();
-  const privateKey = process.env.GOOGLE_DRIVE_PRIVATE_KEY?.replace(
-    /\\n/g,
-    "\n",
-  );
+  const rawKey = process.env.GOOGLE_DRIVE_PRIVATE_KEY;
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID?.trim();
 
-  if (!clientEmail || !privateKey || !folderId) {
+  if (!clientEmail || !rawKey?.trim() || !folderId) {
     throw new NotepadHttpError(
       "Google Drive is not configured. Set GOOGLE_DRIVE_CLIENT_EMAIL, GOOGLE_DRIVE_PRIVATE_KEY, and GOOGLE_DRIVE_FOLDER_ID.",
       503,
     );
   }
 
+  const privateKey = normalizePrivateKey(rawKey);
   return { clientEmail, privateKey, folderId };
 }
 
@@ -160,6 +190,22 @@ function mapDriveError(operation: string, err: unknown): never {
     );
   }
 
+  const code =
+    typeof serialized.code === "string" || typeof serialized.code === "number"
+      ? String(serialized.code)
+      : "";
+  if (
+    code === "ERR_OSSL_UNSUPPORTED" ||
+    apiMessage.includes("DECODER routines") ||
+    apiMessage.includes("ERR_OSSL_UNSUPPORTED")
+  ) {
+    throw new NotepadHttpError(
+      "Google Drive private key cannot be parsed. On Vercel, set GOOGLE_DRIVE_PRIVATE_KEY as one line with \\n escapes and no surrounding quotes.",
+      503,
+      { operation, code, apiMessage },
+    );
+  }
+
   if (httpStatus >= 400 && httpStatus < 500) {
     throw new NotepadHttpError(apiMessage, httpStatus, {
       operation,
@@ -167,9 +213,10 @@ function mapDriveError(operation: string, err: unknown): never {
     });
   }
 
+  // Avoid HTTP 502 — Cloudflare replaces origin 502 with an opaque HTML page.
   throw new NotepadHttpError(
     `Google Drive ${operation} failed. See server logs for details.`,
-    502,
+    500,
     { operation, reason, apiMessage },
   );
 }
@@ -209,7 +256,7 @@ export async function uploadToDrive(
 
     const file = response.data;
     if (!file.id) {
-      throw new NotepadHttpError("Drive upload failed: no file id returned", 502);
+      throw new NotepadHttpError("Drive upload failed: no file id returned", 500);
     }
 
     logNotepad(SCOPE, "info", "Drive upload succeeded", {

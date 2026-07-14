@@ -621,6 +621,19 @@ function NotepadPage() {
               <span className="hidden sm:inline">Share</span>
             </Button>
           )}
+          {activeNote && (
+            <NoteAttachments
+              noteId={activeNote.id}
+              attachments={activeNote.attachments ?? []}
+              onChange={setAttachments}
+              readOnly={viewMode === "preview"}
+              className={cn(
+                viewMode === "compose" &&
+                  noteType === "canvas" &&
+                  "rounded-xl bg-white/90 px-1 shadow-[0_1px_4px_rgba(0,0,0,0.08)]",
+              )}
+            />
+          )}
           <Button
             variant={viewMode === "preview" ? "secondary" : "outline"}
             size="sm"
@@ -703,18 +716,6 @@ function NotepadPage() {
                 fillHeight
                 className="min-h-0 flex-1"
               />
-              {activeNote && (
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-start p-3 md:p-4">
-                  <div className="pointer-events-auto max-w-md">
-                    <NoteAttachments
-                      noteId={activeNote.id}
-                      attachments={activeNote.attachments ?? []}
-                      onChange={setAttachments}
-                      compact
-                    />
-                  </div>
-                </div>
-              )}
             </div>
           ) : (
             <div
@@ -747,15 +748,6 @@ function NotepadPage() {
                   ) : (
                     <p className="text-sm text-muted-foreground">This note is empty.</p>
                   )}
-                  {activeNote && (
-                    <NoteAttachments
-                      noteId={activeNote.id}
-                      attachments={activeNote.attachments ?? []}
-                      onChange={setAttachments}
-                      readOnly
-                      className="mt-2"
-                    />
-                  )}
                 </>
               ) : (
                 <>
@@ -772,14 +764,6 @@ function NotepadPage() {
                     placeholder="Start writing… Markdown supported."
                     className="min-h-[50vh] resize-y font-mono text-sm leading-relaxed"
                   />
-                  {activeNote && (
-                    <NoteAttachments
-                      noteId={activeNote.id}
-                      attachments={activeNote.attachments ?? []}
-                      onChange={setAttachments}
-                      className="mt-2"
-                    />
-                  )}
                 </>
               )}
             </div>

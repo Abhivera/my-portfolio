@@ -103,7 +103,7 @@ export const MAX_CONTENT_LENGTH = 500_000;
 export const MAX_INK_DATA_LENGTH = 1_000_000;
 export const MAX_ATTACHMENTS_PER_NOTE = 20;
 export const MAX_ATTACHMENT_NAME_LENGTH = 200;
-export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+export const MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024;
 
 /** HTML file input `accept` — keep in sync with Drive allowlists in drive.ts. */
 export const ATTACHMENT_FILE_ACCEPT =
