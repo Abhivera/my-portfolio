@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FileArchive,
   FileSpreadsheet,
@@ -42,30 +42,41 @@ type UploadJob = {
   name: string;
 };
 
+function formatBytes(size: number): string {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function fileKind(mimeType: string): {
+  label: string;
   Icon: typeof FileText;
   tone: string;
 } {
   if (mimeType.startsWith("image/")) {
     return {
+      label: "Image",
       Icon: ImageIcon,
       tone: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
     };
   }
   if (mimeType.startsWith("audio/")) {
     return {
+      label: "Audio",
       Icon: Music,
       tone: "bg-violet-500/10 text-violet-700 dark:text-violet-300",
     };
   }
   if (mimeType.startsWith("video/")) {
     return {
+      label: "Video",
       Icon: Film,
       tone: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
     };
   }
   if (mimeType === "application/pdf") {
     return {
+      label: "PDF",
       Icon: FileText,
       tone: "bg-red-500/10 text-red-700 dark:text-red-300",
     };
@@ -76,17 +87,20 @@ function fileKind(mimeType: string): {
     mimeType.includes("opendocument.spreadsheet")
   ) {
     return {
+      label: "Sheet",
       Icon: FileSpreadsheet,
       tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
     };
   }
   if (mimeType.includes("zip") || mimeType.includes("compressed")) {
     return {
+      label: "Archive",
       Icon: FileArchive,
       tone: "bg-amber-500/10 text-amber-800 dark:text-amber-300",
     };
   }
   return {
+    label: "File",
     Icon: FileText,
     tone: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
   };
@@ -94,6 +108,158 @@ function fileKind(mimeType: string): {
 
 function canInlinePreview(mimeType: string): boolean {
   return mimeType.startsWith("image/") || mimeType === "application/pdf";
+}
+
+function AttachmentChip({
+  attachment,
+  shareToken,
+  readOnly,
+  removing,
+  confirmRemove,
+  onConfirmRemove,
+  onCancelConfirm,
+  onRemove,
+}: {
+  attachment: NotepadAttachment;
+  shareToken?: string;
+  readOnly: boolean;
+  removing: boolean;
+  confirmRemove: boolean;
+  onConfirmRemove: () => void;
+  onCancelConfirm: () => void;
+  onRemove: () => void;
+}) {
+  const { Icon, tone, label } = fileKind(attachment.mimeType);
+  const isImage = attachment.mimeType.startsWith("image/");
+  const href = canInlinePreview(attachment.mimeType)
+    ? notepadAttachmentUrl(attachment.id, { inline: true, shareToken })
+    : notepadAttachmentUrl(attachment.id, { shareToken });
+
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [hovered, setHovered] = useState(false);
+
+  useEffect(() => {
+    if (!isImage || !hovered || previewSrc) return;
+    let revoked = false;
+    const url = notepadAttachmentUrl(attachment.id, {
+      inline: true,
+      shareToken,
+    });
+
+    void fetch(url, { credentials: shareToken ? "omit" : "include" })
+      .then((res) => {
+        if (!res.ok) throw new Error("preview failed");
+        return res.blob();
+      })
+      .then((blob) => {
+        if (revoked) return;
+        setPreviewSrc(URL.createObjectURL(blob));
+      })
+      .catch(() => {
+        /* preview optional */
+      });
+
+    return () => {
+      revoked = true;
+    };
+  }, [attachment.id, hovered, isImage, previewSrc, shareToken]);
+
+  useEffect(() => {
+    return () => {
+      if (previewSrc) URL.revokeObjectURL(previewSrc);
+    };
+  }, [previewSrc]);
+
+  return (
+    <div
+      className="group relative shrink-0"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => {
+        setHovered(false);
+        onCancelConfirm();
+      }}
+    >
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={`Open ${attachment.name}`}
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-lg ring-1 ring-black/[0.06] transition hover:ring-black/15",
+          tone,
+        )}
+      >
+        {removing ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Icon className="h-3.5 w-3.5" />
+        )}
+      </a>
+
+      {/* Hover preview */}
+      <div
+        className={cn(
+          "pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-44 -translate-x-1/2 rounded-lg border border-black/[0.08] bg-white p-2 text-left shadow-lg transition",
+          hovered ? "opacity-100" : "invisible opacity-0",
+        )}
+      >
+        {isImage && previewSrc ? (
+          <img
+            src={previewSrc}
+            alt=""
+            className="mb-1.5 h-24 w-full rounded-md object-cover ring-1 ring-black/5"
+          />
+        ) : (
+          <div
+            className={cn(
+              "mb-1.5 flex h-16 w-full items-center justify-center rounded-md",
+              tone,
+            )}
+          >
+            <Icon className="h-6 w-6" />
+          </div>
+        )}
+        <p className="truncate text-xs font-medium text-[#1b1b1f]">
+          {attachment.name}
+        </p>
+        <p className="mt-0.5 text-[10px] text-muted-foreground">
+          {label} · {formatBytes(attachment.size)}
+        </p>
+      </div>
+
+      {!readOnly && (
+        <button
+          type="button"
+          disabled={removing}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!confirmRemove) {
+              onConfirmRemove();
+              return;
+            }
+            onRemove();
+          }}
+          className={cn(
+            "absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-white shadow-sm opacity-0 transition group-hover:opacity-100 disabled:opacity-50",
+            confirmRemove
+              ? "bg-destructive opacity-100"
+              : "bg-[#1b1b1f]",
+          )}
+          aria-label={
+            confirmRemove
+              ? `Confirm remove ${attachment.name}`
+              : `Remove ${attachment.name}`
+          }
+          title={
+            confirmRemove ? "Click again to confirm delete" : "Remove attachment"
+          }
+        >
+          <X className="h-2.5 w-2.5" />
+        </button>
+      )}
+    </div>
+  );
 }
 
 /** Compact top-bar attachment icons — add / open / remove without a large panel. */
@@ -108,10 +274,35 @@ export function NoteAttachments({
   const inputRef = useRef<HTMLInputElement>(null);
   const [queue, setQueue] = useState<UploadJob[]>([]);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const atLimit = attachments.length >= MAX_ATTACHMENTS_PER_NOTE;
   const uploading = queue.length > 0;
   const remaining = MAX_ATTACHMENTS_PER_NOTE - attachments.length;
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
+
+  const armConfirm = (id: string) => {
+    setConfirmId(id);
+    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    confirmTimerRef.current = setTimeout(() => {
+      setConfirmId(null);
+      confirmTimerRef.current = null;
+    }, 3000);
+  };
+
+  const clearConfirm = () => {
+    if (confirmTimerRef.current) {
+      clearTimeout(confirmTimerRef.current);
+      confirmTimerRef.current = null;
+    }
+    setConfirmId(null);
+  };
 
   const uploadFiles = async (files: FileList | File[]) => {
     if (readOnly) return;
@@ -163,6 +354,7 @@ export function NoteAttachments({
 
   const handleRemove = async (attachment: NotepadAttachment) => {
     if (readOnly) return;
+    clearConfirm();
     setRemovingId(attachment.id);
     try {
       await deleteNotepadAttachment(noteId, attachment.id);
@@ -192,54 +384,19 @@ export function NoteAttachments({
       )}
 
       <div className="flex min-w-0 items-center gap-1 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {attachments.map((attachment) => {
-          const { Icon, tone } = fileKind(attachment.mimeType);
-          const href = canInlinePreview(attachment.mimeType)
-            ? notepadAttachmentUrl(attachment.id, {
-                inline: true,
-                shareToken,
-              })
-            : notepadAttachmentUrl(attachment.id, { shareToken });
-          const removing = removingId === attachment.id;
-
-          return (
-            <div key={attachment.id} className="group relative shrink-0">
-              <a
-                href={href}
-                target="_blank"
-                rel="noreferrer"
-                title={attachment.name}
-                aria-label={`Open ${attachment.name}`}
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-lg ring-1 ring-black/[0.06] transition hover:ring-black/15",
-                  tone,
-                )}
-              >
-                {removing ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Icon className="h-3.5 w-3.5" />
-                )}
-              </a>
-              {!readOnly && (
-                <button
-                  type="button"
-                  disabled={removing}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    void handleRemove(attachment);
-                  }}
-                  className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-[#1b1b1f] text-white shadow-sm group-hover:flex disabled:opacity-50"
-                  aria-label={`Remove ${attachment.name}`}
-                  title="Remove"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              )}
-            </div>
-          );
-        })}
+        {attachments.map((attachment) => (
+          <AttachmentChip
+            key={attachment.id}
+            attachment={attachment}
+            shareToken={shareToken}
+            readOnly={readOnly}
+            removing={removingId === attachment.id}
+            confirmRemove={confirmId === attachment.id}
+            onConfirmRemove={() => armConfirm(attachment.id)}
+            onCancelConfirm={clearConfirm}
+            onRemove={() => void handleRemove(attachment)}
+          />
+        ))}
 
         {queue.map((job) => (
           <div

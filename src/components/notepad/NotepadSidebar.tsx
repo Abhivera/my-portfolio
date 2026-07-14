@@ -132,7 +132,9 @@ function NoteRow({
   const currentCollectionId = note.collectionId ?? null;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.title);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!editing) setDraft(note.title);
@@ -145,6 +147,20 @@ function NoteRow({
     input.focus();
     input.select();
   }, [editing]);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
+
+  const clearConfirmDelete = () => {
+    if (confirmTimerRef.current) {
+      clearTimeout(confirmTimerRef.current);
+      confirmTimerRef.current = null;
+    }
+    setConfirmDelete(false);
+  };
 
   const commitRename = () => {
     if (!editing) return;
@@ -163,12 +179,35 @@ function NoteRow({
   };
 
   const startRename = () => {
+    clearConfirmDelete();
     setDraft(note.title || "Untitled");
     setEditing(true);
   };
 
+  const handleDeleteClick = () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+      confirmTimerRef.current = setTimeout(() => {
+        setConfirmDelete(false);
+        confirmTimerRef.current = null;
+      }, 3000);
+      return;
+    }
+    clearConfirmDelete();
+    onDelete(note.id);
+  };
+
   return (
-    <li className="group relative">
+    <li
+      className="group relative"
+      onMouseLeave={clearConfirmDelete}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          clearConfirmDelete();
+        }
+      }}
+    >
       {editing ? (
         <div
           className={cn(
@@ -251,7 +290,14 @@ function NoteRow({
             )}
           </button>
 
-          <div className="absolute right-0.5 top-1/2 flex -translate-y-1/2 items-center gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
+          <div
+            className={cn(
+              "absolute right-0.5 top-1/2 flex -translate-y-1/2 items-center gap-0.5 transition-opacity",
+              confirmDelete
+                ? "pointer-events-auto opacity-100"
+                : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+            )}
+          >
             <button
               type="button"
               className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
@@ -268,12 +314,25 @@ function NoteRow({
             {canDelete && (
               <button
                 type="button"
-                className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                aria-label={`Delete "${note.title || "Untitled"}"`}
-                title="Delete note"
+                className={cn(
+                  "flex h-7 w-7 items-center justify-center rounded transition-colors",
+                  confirmDelete
+                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    : "text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
+                )}
+                aria-label={
+                  confirmDelete
+                    ? `Confirm delete "${note.title || "Untitled"}"`
+                    : `Delete "${note.title || "Untitled"}"`
+                }
+                title={
+                  confirmDelete
+                    ? "Click again to confirm delete"
+                    : "Delete note"
+                }
                 onClick={(e) => {
                   e.stopPropagation();
-                  onDelete(note.id);
+                  handleDeleteClick();
                 }}
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -285,7 +344,7 @@ function NoteRow({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-background hover:text-foreground data-[state=open]:bg-background"
+                    className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-background hover:text-foreground data-[state=open]:bg-background data-[state=open]:opacity-100"
                     aria-label="Move note"
                     title="Move"
                     onClick={(e) => e.stopPropagation()}
@@ -339,7 +398,9 @@ function CollectionHeader({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(collection.title);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!editing) setDraft(collection.title);
@@ -352,6 +413,20 @@ function CollectionHeader({
     input.focus();
     input.select();
   }, [editing]);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
+
+  const clearConfirmDelete = () => {
+    if (confirmTimerRef.current) {
+      clearTimeout(confirmTimerRef.current);
+      confirmTimerRef.current = null;
+    }
+    setConfirmDelete(false);
+  };
 
   const commitRename = () => {
     if (!editing) return;
@@ -370,12 +445,35 @@ function CollectionHeader({
   };
 
   const startRename = () => {
+    clearConfirmDelete();
     setDraft(collection.title || "Untitled");
     setEditing(true);
   };
 
+  const handleDeleteClick = () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+      confirmTimerRef.current = setTimeout(() => {
+        setConfirmDelete(false);
+        confirmTimerRef.current = null;
+      }, 3000);
+      return;
+    }
+    clearConfirmDelete();
+    onDelete(collection.id);
+  };
+
   return (
-    <div className="group/folder flex items-center gap-0.5 rounded-md px-1 py-1 hover:bg-muted/50">
+    <div
+      className="group/folder flex items-center gap-0.5 rounded-md px-1 py-1 hover:bg-muted/50"
+      onMouseLeave={clearConfirmDelete}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          clearConfirmDelete();
+        }
+      }}
+    >
       {editing ? (
         <div className="flex min-w-0 flex-1 items-center gap-1">
           <Folder className="h-3.5 w-3.5 shrink-0 opacity-70" />
@@ -432,11 +530,11 @@ function CollectionHeader({
             onNewNote={onNewNote}
             collectionId={collection.id}
             compact
-            className="flex h-6 w-6 items-center justify-center opacity-70 group-hover/folder:opacity-100"
+            className="flex h-6 w-6 items-center justify-center opacity-0 pointer-events-none transition-opacity group-hover/folder:pointer-events-auto group-hover/folder:opacity-100 group-focus-within/folder:pointer-events-auto group-focus-within/folder:opacity-100"
           />
           <button
             type="button"
-            className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground opacity-70 transition-opacity hover:bg-background hover:text-foreground group-hover/folder:opacity-100"
+            className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground opacity-0 pointer-events-none transition-opacity hover:bg-background hover:text-foreground group-hover/folder:pointer-events-auto group-hover/folder:opacity-100 group-focus-within/folder:pointer-events-auto group-focus-within/folder:opacity-100"
             aria-label={`Rename "${collection.title || "Untitled"}"`}
             title="Rename collection"
             onClick={(e) => {
@@ -448,12 +546,25 @@ function CollectionHeader({
           </button>
           <button
             type="button"
-            className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground opacity-70 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover/folder:opacity-100"
-            aria-label={`Delete "${collection.title || "Untitled"}"`}
-            title="Delete collection"
+            className={cn(
+              "flex h-6 w-6 items-center justify-center rounded opacity-0 pointer-events-none transition-opacity group-hover/folder:pointer-events-auto group-hover/folder:opacity-100 group-focus-within/folder:pointer-events-auto group-focus-within/folder:opacity-100",
+              confirmDelete
+                ? "bg-destructive text-destructive-foreground opacity-100 pointer-events-auto hover:bg-destructive/90"
+                : "text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
+            )}
+            aria-label={
+              confirmDelete
+                ? `Confirm delete "${collection.title || "Untitled"}"`
+                : `Delete "${collection.title || "Untitled"}"`
+            }
+            title={
+              confirmDelete
+                ? "Click again to confirm delete"
+                : "Delete collection"
+            }
             onClick={(e) => {
               e.stopPropagation();
-              onDelete(collection.id);
+              handleDeleteClick();
             }}
           >
             <Trash2 className="h-3.5 w-3.5" />

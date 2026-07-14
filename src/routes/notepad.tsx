@@ -260,12 +260,9 @@ function NotepadPage() {
       return;
     }
     const note = workspace.notes.find((n) => n.id === id);
-    const confirmed = window.confirm(
-      `Delete "${note?.title || "Untitled"}"? This cannot be undone.`,
-    );
-    if (!confirmed) return;
+    if (!note) return;
 
-    const attachments = note?.attachments ?? [];
+    const attachments = note.attachments ?? [];
     for (const attachment of attachments) {
       try {
         await deleteNotepadAttachment(id, attachment.id);
@@ -397,15 +394,6 @@ function NotepadPage() {
   };
 
   const handleDeleteCollection = (id: string) => {
-    const collection = getWorkspaceCollections(workspace).find((c) => c.id === id);
-    const count = workspace.notes.filter((n) => n.collectionId === id).length;
-    const confirmed = window.confirm(
-      count > 0
-        ? `Delete collection "${collection?.title || "Untitled"}"? Notes inside will move to Uncategorized.`
-        : `Delete collection "${collection?.title || "Untitled"}"?`,
-    );
-    if (!confirmed) return;
-
     setWorkspace((prev) => ({
       ...prev,
       collections: (prev.collections ?? []).filter((c) => c.id !== id),
