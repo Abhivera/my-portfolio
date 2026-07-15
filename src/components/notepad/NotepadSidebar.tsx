@@ -20,7 +20,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { normalizeNoteType } from "@/lib/notepad-utils";
 import type {
@@ -308,7 +307,7 @@ function NoteRow({
 
           <div
             className={cn(
-              "flex shrink-0 items-center gap-px pr-1.5 transition-opacity duration-150",
+              "flex shrink-0 items-center gap-0.5 pr-1.5 transition-opacity duration-150",
               showActions
                 ? "pointer-events-auto opacity-100"
                 : "pointer-events-none w-0 overflow-hidden opacity-0 pr-0",
@@ -316,7 +315,7 @@ function NoteRow({
           >
             <button
               type="button"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-foreground/70 transition-colors hover:bg-background/80 hover:text-foreground"
               aria-label={`Rename "${note.title || "Untitled"}"`}
               title="Rename"
               onClick={(e) => {
@@ -327,40 +326,46 @@ function NoteRow({
               <Pencil className="h-3.5 w-3.5" />
             </button>
 
-            {canDelete && (
-              <button
-                type="button"
-                className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
-                  confirmDelete
+            <button
+              type="button"
+              disabled={!canDelete}
+              className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+                !canDelete
+                  ? "cursor-not-allowed text-muted-foreground/40"
+                  : confirmDelete
                     ? "bg-red-600 text-white hover:bg-red-700"
-                    : "text-muted-foreground hover:bg-red-500/10 hover:text-red-600",
-                )}
-                aria-label={
-                  confirmDelete
+                    : "text-red-600 hover:bg-red-500/15",
+              )}
+              aria-label={
+                !canDelete
+                  ? "Cannot delete the only note"
+                  : confirmDelete
                     ? `Confirm delete "${note.title || "Untitled"}"`
                     : `Delete "${note.title || "Untitled"}"`
-                }
-                title={
-                  confirmDelete
+              }
+              title={
+                !canDelete
+                  ? "Cannot delete the only note"
+                  : confirmDelete
                     ? "Click again to confirm delete"
                     : "Delete note"
-                }
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteClick();
-                }}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            )}
+              }
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!canDelete) return;
+                handleDeleteClick();
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
 
             {collections.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground data-[state=open]:bg-background/70 data-[state=open]:text-foreground"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-foreground/70 transition-colors hover:bg-background/80 hover:text-foreground data-[state=open]:bg-background/80 data-[state=open]:text-foreground"
                     aria-label="Move note"
                     title="Move"
                     onClick={(e) => e.stopPropagation()}
@@ -666,7 +671,7 @@ export function NotepadSidebar({
         </div>
       </div>
 
-      <ScrollArea className="flex-1 px-2">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2">
         <div className="space-y-3 pb-4">
           {collections.map((collection) => {
             const isCollapsed = Boolean(collapsed[collection.id]);
@@ -739,7 +744,7 @@ export function NotepadSidebar({
             </ul>
           </div>
         </div>
-      </ScrollArea>
+      </div>
 
       <div className="space-y-0.5 border-t border-border/60 p-2">
         <button
