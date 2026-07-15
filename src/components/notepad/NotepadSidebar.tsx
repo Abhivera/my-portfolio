@@ -133,8 +133,10 @@ function NoteRow({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.title);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showActions = active || hovered || confirmDelete;
 
   useEffect(() => {
     if (!editing) setDraft(note.title);
@@ -200,10 +202,16 @@ function NoteRow({
 
   return (
     <li
-      className="group relative"
-      onMouseLeave={clearConfirmDelete}
+      className="relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => {
+        setHovered(false);
+        clearConfirmDelete();
+      }}
+      onFocus={() => setHovered(true)}
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setHovered(false);
           clearConfirmDelete();
         }
       }}
@@ -293,9 +301,9 @@ function NoteRow({
           <div
             className={cn(
               "absolute right-0.5 top-1/2 z-10 flex -translate-y-1/2 items-center gap-0.5 rounded-md bg-background/95 p-0.5 shadow-sm ring-1 ring-border/60 transition-opacity",
-              confirmDelete
+              showActions
                 ? "pointer-events-auto opacity-100"
-                : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+                : "pointer-events-none opacity-0",
             )}
           >
             <button
@@ -399,8 +407,10 @@ function CollectionHeader({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(collection.title);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showActions = hovered || confirmDelete;
 
   useEffect(() => {
     if (!editing) setDraft(collection.title);
@@ -466,10 +476,16 @@ function CollectionHeader({
 
   return (
     <div
-      className="group/folder flex items-center gap-0.5 rounded-md px-1 py-1 hover:bg-muted/50"
-      onMouseLeave={clearConfirmDelete}
+      className="flex items-center gap-0.5 rounded-md px-1 py-1 hover:bg-muted/50"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => {
+        setHovered(false);
+        clearConfirmDelete();
+      }}
+      onFocus={() => setHovered(true)}
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setHovered(false);
           clearConfirmDelete();
         }
       }}
@@ -529,9 +545,9 @@ function CollectionHeader({
           <div
             className={cn(
               "flex items-center gap-0.5 rounded-md bg-background/95 p-0.5 shadow-sm ring-1 ring-border/60 transition-opacity",
-              confirmDelete
+              showActions
                 ? "pointer-events-auto opacity-100"
-                : "pointer-events-none opacity-0 group-hover/folder:pointer-events-auto group-hover/folder:opacity-100 group-focus-within/folder:pointer-events-auto group-focus-within/folder:opacity-100",
+                : "pointer-events-none opacity-0",
             )}
           >
             <NewNoteMenu
