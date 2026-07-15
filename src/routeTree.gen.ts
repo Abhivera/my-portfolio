@@ -13,10 +13,10 @@ import { Route as TodoRouteImport } from './routes/todo'
 import { Route as NotepadRouteImport } from './routes/notepad'
 import { Route as GoalRouteImport } from './routes/goal'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as NotepadShareTokenRouteImport } from './routes/notepad.share.$token'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as BlogAdminRouteImport } from './routes/blog/admin'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
+import { Route as NotepadShareTokenRouteImport } from './routes/notepad.share.$token'
 
 const TodoRoute = TodoRouteImport.update({
   id: '/todo',
@@ -38,11 +38,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NotepadShareTokenRoute = NotepadShareTokenRouteImport.update({
-  id: '/notepad/share/$token',
-  path: '/notepad/share/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/blog/',
   path: '/blog/',
@@ -58,11 +53,16 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotepadShareTokenRoute = NotepadShareTokenRouteImport.update({
+  id: '/share/$token',
+  path: '/share/$token',
+  getParentRoute: () => NotepadRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/goal': typeof GoalRoute
-  '/notepad': typeof NotepadRoute
+  '/notepad': typeof NotepadRouteWithChildren
   '/todo': typeof TodoRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog/admin': typeof BlogAdminRoute
@@ -72,7 +72,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/goal': typeof GoalRoute
-  '/notepad': typeof NotepadRoute
+  '/notepad': typeof NotepadRouteWithChildren
   '/todo': typeof TodoRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog/admin': typeof BlogAdminRoute
@@ -83,7 +83,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/goal': typeof GoalRoute
-  '/notepad': typeof NotepadRoute
+  '/notepad': typeof NotepadRouteWithChildren
   '/todo': typeof TodoRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog/admin': typeof BlogAdminRoute
@@ -126,12 +126,11 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   GoalRoute: typeof GoalRoute
-  NotepadRoute: typeof NotepadRoute
+  NotepadRoute: typeof NotepadRouteWithChildren
   TodoRoute: typeof TodoRoute
   BlogSlugRoute: typeof BlogSlugRoute
   BlogAdminRoute: typeof BlogAdminRoute
   BlogIndexRoute: typeof BlogIndexRoute
-  NotepadShareTokenRoute: typeof NotepadShareTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -164,13 +163,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/notepad/share/$token': {
-      id: '/notepad/share/$token'
-      path: '/notepad/share/$token'
-      fullPath: '/notepad/share/$token'
-      preLoaderRoute: typeof NotepadShareTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/blog/': {
       id: '/blog/'
       path: '/blog'
@@ -192,18 +184,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notepad/share/$token': {
+      id: '/notepad/share/$token'
+      path: '/share/$token'
+      fullPath: '/notepad/share/$token'
+      preLoaderRoute: typeof NotepadShareTokenRouteImport
+      parentRoute: typeof NotepadRoute
+    }
   }
 }
+
+interface NotepadRouteChildren {
+  NotepadShareTokenRoute: typeof NotepadShareTokenRoute
+}
+
+const NotepadRouteChildren: NotepadRouteChildren = {
+  NotepadShareTokenRoute: NotepadShareTokenRoute,
+}
+
+const NotepadRouteWithChildren =
+  NotepadRoute._addFileChildren(NotepadRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   GoalRoute: GoalRoute,
-  NotepadRoute: NotepadRoute,
+  NotepadRoute: NotepadRouteWithChildren,
   TodoRoute: TodoRoute,
   BlogSlugRoute: BlogSlugRoute,
   BlogAdminRoute: BlogAdminRoute,
   BlogIndexRoute: BlogIndexRoute,
-  NotepadShareTokenRoute: NotepadShareTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
