@@ -33,8 +33,7 @@ export function Hero() {
             <h1 className="font-display text-4xl sm:text-7xl lg:text-8xl leading-[0.95] tracking-tight">
               Building <em className="text-gradient-sunset not-italic">scalable</em>
               <br />
-              backends &amp;
-              <br />
+          
               <span
                 className="inline-block px-3 py-1 rounded-2xl border border-border"
                 style={{
@@ -42,7 +41,7 @@ export function Hero() {
                   color: "var(--primary)",
                 }}
               >
-                GenAI
+                AI
               </span>{" "}
               systems.
             </h1>
