@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Terminal, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import favicon from "../../../media/favicon_io/apple-touch-icon.png?url";
 
 const links = [
   { href: "#about", label: "About" },
@@ -30,9 +31,11 @@ export function Nav() {
     >
       <nav className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
         <a href="#top" className="flex items-center gap-2.5 group">
-          <span className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-gradient-sunset shadow-warm flex items-center justify-center text-primary-foreground group-hover:rotate-3 transition-transform duration-300">
-            <Terminal size={20} />
-          </span>
+          <img
+            src={favicon}
+            alt="Abhijit Verma"
+            className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl object-cover shadow-warm group-hover:rotate-3 transition-transform duration-300"
+          />
           <span className="font-display text-lg sm:text-2xl tracking-tight font-semibold">
             Abhijit<span className="text-[color:var(--accent)]">.</span>
           </span>

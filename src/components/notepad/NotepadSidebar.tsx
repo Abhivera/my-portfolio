@@ -292,7 +292,7 @@ function NoteRow({
 
           <div
             className={cn(
-              "absolute right-0.5 top-1/2 flex -translate-y-1/2 items-center gap-0.5 transition-opacity",
+              "absolute right-0.5 top-1/2 z-10 flex -translate-y-1/2 items-center gap-0.5 rounded-md bg-background/95 p-0.5 shadow-sm ring-1 ring-border/60 transition-opacity",
               confirmDelete
                 ? "pointer-events-auto opacity-100"
                 : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
@@ -300,7 +300,7 @@ function NoteRow({
           >
             <button
               type="button"
-              className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+              className="flex h-7 w-7 items-center justify-center rounded text-foreground transition-colors hover:bg-muted"
               aria-label={`Rename "${note.title || "Untitled"}"`}
               title="Rename"
               onClick={(e) => {
@@ -317,8 +317,8 @@ function NoteRow({
                 className={cn(
                   "flex h-7 w-7 items-center justify-center rounded transition-colors",
                   confirmDelete
-                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    : "text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
+                    ? "bg-red-600 text-white hover:bg-red-700"
+                    : "text-red-600 hover:bg-red-50",
                 )}
                 aria-label={
                   confirmDelete
@@ -344,7 +344,7 @@ function NoteRow({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-background hover:text-foreground data-[state=open]:bg-background data-[state=open]:opacity-100"
+                    className="flex h-7 w-7 items-center justify-center rounded text-foreground transition-colors hover:bg-muted data-[state=open]:bg-muted"
                     aria-label="Move note"
                     title="Move"
                     onClick={(e) => e.stopPropagation()}
@@ -526,49 +526,58 @@ function CollectionHeader({
 
       {!editing && (
         <>
-          <NewNoteMenu
-            onNewNote={onNewNote}
-            collectionId={collection.id}
-            compact
-            className="flex h-6 w-6 items-center justify-center opacity-0 pointer-events-none transition-opacity group-hover/folder:pointer-events-auto group-hover/folder:opacity-100 group-focus-within/folder:pointer-events-auto group-focus-within/folder:opacity-100"
-          />
-          <button
-            type="button"
-            className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground opacity-0 pointer-events-none transition-opacity hover:bg-background hover:text-foreground group-hover/folder:pointer-events-auto group-hover/folder:opacity-100 group-focus-within/folder:pointer-events-auto group-focus-within/folder:opacity-100"
-            aria-label={`Rename "${collection.title || "Untitled"}"`}
-            title="Rename collection"
-            onClick={(e) => {
-              e.stopPropagation();
-              startRename();
-            }}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
+          <div
             className={cn(
-              "flex h-6 w-6 items-center justify-center rounded opacity-0 pointer-events-none transition-opacity group-hover/folder:pointer-events-auto group-hover/folder:opacity-100 group-focus-within/folder:pointer-events-auto group-focus-within/folder:opacity-100",
+              "flex items-center gap-0.5 rounded-md bg-background/95 p-0.5 shadow-sm ring-1 ring-border/60 transition-opacity",
               confirmDelete
-                ? "bg-destructive text-destructive-foreground opacity-100 pointer-events-auto hover:bg-destructive/90"
-                : "text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
+                ? "pointer-events-auto opacity-100"
+                : "pointer-events-none opacity-0 group-hover/folder:pointer-events-auto group-hover/folder:opacity-100 group-focus-within/folder:pointer-events-auto group-focus-within/folder:opacity-100",
             )}
-            aria-label={
-              confirmDelete
-                ? `Confirm delete "${collection.title || "Untitled"}"`
-                : `Delete "${collection.title || "Untitled"}"`
-            }
-            title={
-              confirmDelete
-                ? "Click again to confirm delete"
-                : "Delete collection"
-            }
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteClick();
-            }}
           >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+            <NewNoteMenu
+              onNewNote={onNewNote}
+              collectionId={collection.id}
+              compact
+              className="flex h-6 w-6 items-center justify-center text-foreground hover:bg-muted"
+            />
+            <button
+              type="button"
+              className="flex h-6 w-6 items-center justify-center rounded text-foreground transition-colors hover:bg-muted"
+              aria-label={`Rename "${collection.title || "Untitled"}"`}
+              title="Rename collection"
+              onClick={(e) => {
+                e.stopPropagation();
+                startRename();
+              }}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              className={cn(
+                "flex h-6 w-6 items-center justify-center rounded transition-colors",
+                confirmDelete
+                  ? "bg-red-600 text-white hover:bg-red-700"
+                  : "text-red-600 hover:bg-red-50",
+              )}
+              aria-label={
+                confirmDelete
+                  ? `Confirm delete "${collection.title || "Untitled"}"`
+                  : `Delete "${collection.title || "Untitled"}"`
+              }
+              title={
+                confirmDelete
+                  ? "Click again to confirm delete"
+                  : "Delete collection"
+              }
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteClick();
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </>
       )}
     </div>
