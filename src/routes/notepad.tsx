@@ -478,14 +478,7 @@ function NotepadPage() {
   }
 
   return (
-    <div
-      className={cn(
-        "flex h-screen flex-col",
-        viewMode === "compose" && noteType === "canvas"
-          ? "bg-white"
-          : "bg-background",
-      )}
-    >
+    <div className="flex h-screen flex-col bg-white">
       <Toaster />
       <header
         className={cn(
@@ -690,9 +683,9 @@ function NotepadPage() {
 
         <main
           className={cn(
-            "flex min-h-0 flex-1 flex-col",
+            "flex min-h-0 flex-1 flex-col bg-white",
             viewMode === "compose" && noteType === "canvas"
-              ? "overflow-hidden bg-white"
+              ? "overflow-hidden"
               : "overflow-y-auto p-4 md:p-6",
           )}
         >
@@ -750,7 +743,7 @@ function NotepadPage() {
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     placeholder="Start writing… Markdown supported."
-                    className="min-h-[50vh] resize-y font-mono text-sm leading-relaxed"
+                    className="min-h-[60vh] flex-1 resize-none border-0 bg-transparent p-0 text-base leading-7 shadow-none placeholder:text-muted-foreground/45 focus-visible:ring-0 md:text-[15px] md:leading-7"
                   />
                 </>
               )}
