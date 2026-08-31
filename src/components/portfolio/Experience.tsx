@@ -4,7 +4,7 @@ const jobs = [
   {
     company: "INTELLIOD",
     role: "Software Engineer",
-    period: "Sept 2025 — Present",
+    period: "July 2024 — Present",
     current: true,
     points: [
       "Built RAG-based AI pipelines using vector search for contextual chat and recommendation systems",
@@ -18,7 +18,7 @@ const jobs = [
   {
     company: "MINDCOM TECHNOLOGIES",
     role: "Software Engineer",
-    period: "July 2023 — Aug 2025",
+    period: "July 2022 — July 2024",
     points: [
       "Architected event-driven microservices using Kafka (pub/sub) and SQS, improving system scalability",
       "Designed and optimized APIs handling 100K+ daily requests with async processing",
