@@ -3,7 +3,7 @@ import { TechIcon } from "./TechIcon";
 const jobs = [
   {
     company: "INTELLIOD",
-    role: "Software Engineer",
+    role: "Backend Developer",
     period: "July 2024 — Present",
     current: true,
     points: [
@@ -17,8 +17,8 @@ const jobs = [
   },
   {
     company: "MINDCOM TECHNOLOGIES",
-    role: "Software Engineer",
-    period: "July 2022 — July 2024",
+    role: "Techinal Consultant",
+    period: "July 2023 — Feb 2025",
     points: [
       "Architected event-driven microservices using Kafka (pub/sub) and SQS, improving system scalability",
       "Designed and optimized APIs handling 100K+ daily requests with async processing",
