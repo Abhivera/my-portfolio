@@ -17,10 +17,7 @@ export function Education() {
             B.Tech, Computer Science
           </h3>
           <p className="mt-2 text-foreground/80">AKTU (Dr. A.P.J. Abdul Kalam Technical University)</p>
-          <div className="mt-8 flex items-baseline gap-3">
-            <span className="font-display text-6xl text-gradient-sunset">8.2</span>
-            <span className="text-muted-foreground">CGPA</span>
-          </div>
+        
         </div>
 
         <div className="rounded-3xl p-6 sm:p-10 bg-card border border-border shadow-soft hover:shadow-warm transition-shadow">
